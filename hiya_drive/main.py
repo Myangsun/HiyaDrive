@@ -144,12 +144,16 @@ async def _run_demo(utterance: Optional[str], driver_id: str, interactive: bool)
         click.echo()
         click.secho("-" * 70, fg="cyan")
 
-        # Show full state for debugging
-        if click.confirm("\n📋 Show full state details?"):
-            click.echo()
-            state_dict = final_state.to_dict()
-            import json
-            click.echo(json.dumps(state_dict, indent=2))
+        # Show full state for debugging (only in interactive mode)
+        try:
+            if click.confirm("\n📋 Show full state details?"):
+                click.echo()
+                state_dict = final_state.to_dict()
+                import json
+                click.echo(json.dumps(state_dict, indent=2))
+        except click.exceptions.Abort:
+            # Non-interactive mode or user cancelled
+            pass
 
     except Exception as e:
         click.secho(f"❌ Error: {e}", fg="red")

@@ -85,6 +85,64 @@ class BookingOrchestrator:
         """Extract booking parameters from user utterance."""
         logger.info(f"[{state.session_id}] Parsing intent from: {state.last_utterance}")
 
+        # In demo mode, use simple mock parsing
+        if settings.demo_mode:
+            # Simple keyword-based parsing for demo
+            utterance = (state.last_utterance or "").lower()
+
+            # Extract party size
+            import re
+            party_match = re.search(r'(\d+)\s+(?:people|person|for)', utterance)
+            if party_match:
+                state.party_size = int(party_match.group(1))
+            else:
+                state.party_size = 2
+
+            # Extract cuisine
+            for cuisine in ["italian", "sushi", "french", "mexican", "thai", "indian"]:
+                if cuisine in utterance:
+                    state.cuisine_type = cuisine.capitalize()
+                    break
+            if not state.cuisine_type:
+                state.cuisine_type = "Italian"
+
+            # Extract location
+            if "near" in utterance:
+                import re
+                loc_match = re.search(r'near\s+(\w+)', utterance)
+                state.location = loc_match.group(1) if loc_match else "Boston"
+            else:
+                state.location = "Boston"
+
+            # Extract date
+            if "friday" in utterance:
+                state.requested_date = "next Friday"
+            elif "tomorrow" in utterance:
+                state.requested_date = "tomorrow"
+            else:
+                state.requested_date = "2024-11-22"
+
+            # Extract time
+            time_match = re.search(r'(\d{1,2})\s*(?:pm|am|:00)', utterance)
+            if time_match:
+                hour = int(time_match.group(1))
+                if "pm" in utterance and hour < 12:
+                    hour += 12
+                state.requested_time = f"{hour:02d}:00"
+            else:
+                state.requested_time = "19:00"
+
+            logger.info(
+                f"[{state.session_id}] Parsed intent (demo): "
+                f"party_size={state.party_size}, "
+                f"cuisine={state.cuisine_type}, "
+                f"location={state.location}, "
+                f"date={state.requested_date}, "
+                f"time={state.requested_time}"
+            )
+            return state
+
+        # Real API parsing (when not in demo mode)
         system_prompt = """Extract booking intent from user speech.
         Return JSON with: party_size (int), cuisine_type (str), location (str), date (str), time (str).
         If value is not mentioned, set to null.
@@ -209,6 +267,16 @@ class BookingOrchestrator:
             state.add_error("No restaurant selected")
             return state
 
+        # In demo mode, use a simple script
+        if settings.demo_mode:
+            state.call_opening_script = (
+                f"Hello, I'd like to make a reservation for {state.party_size} "
+                f"on {state.requested_date} at {state.requested_time}."
+            )
+            logger.info(f"[{state.session_id}] Call script (demo): {state.call_opening_script}")
+            return state
+
+        # Real API call when not in demo mode
         try:
             prompt = f"""You're calling {state.selected_restaurant.name} to make a reservation.
 
@@ -387,9 +455,47 @@ Be natural and friendly. Format: [SCRIPT] your script here [END]"""
 
         # Run the workflow
         try:
-            final_state = await self.app.ainvoke(state)
-            logger.info(f"[{state.session_id}] Booking session completed")
-            return final_state
+            final_state_dict = await self.app.ainvoke(state)
+
+            # LangGraph returns a dict, convert back to DrivingBookingState
+            if isinstance(final_state_dict, dict):
+                # Reconstruct the state object from the returned dict
+                state_obj = DrivingBookingState(
+                    session_id=final_state_dict.get("session_id", state.session_id),
+                    driver_id=final_state_dict.get("driver_id", state.driver_id),
+                    start_time=final_state_dict.get("start_time", state.start_time),
+                    status=final_state_dict.get("status", state.status),
+                    party_size=final_state_dict.get("party_size"),
+                    requested_date=final_state_dict.get("requested_date"),
+                    requested_time=final_state_dict.get("requested_time"),
+                    cuisine_type=final_state_dict.get("cuisine_type"),
+                    location=final_state_dict.get("location"),
+                    driver_location=final_state_dict.get("driver_location"),
+                    driver_calendar_free=final_state_dict.get("driver_calendar_free", False),
+                    restaurant_candidates=final_state_dict.get("restaurant_candidates", []),
+                    selected_restaurant=final_state_dict.get("selected_restaurant"),
+                    confirmation_number=final_state_dict.get("confirmation_number"),
+                    booking_confirmed=final_state_dict.get("booking_confirmed", False),
+                    errors=final_state_dict.get("errors", []),
+                    retry_count=final_state_dict.get("retry_count", 0),
+                    max_retries=final_state_dict.get("max_retries", 2),
+                    current_speed_kmh=final_state_dict.get("current_speed_kmh"),
+                    road_complexity=final_state_dict.get("road_complexity", "unknown"),
+                    safe_to_speak=final_state_dict.get("safe_to_speak", True),
+                    turn_count=final_state_dict.get("turn_count", 0),
+                    last_utterance=final_state_dict.get("last_utterance"),
+                    messages=final_state_dict.get("messages", []),
+                    conversation_history=final_state_dict.get("conversation_history", []),
+                    twilio_call_sid=final_state_dict.get("twilio_call_sid"),
+                    call_connected=final_state_dict.get("call_connected", False),
+                    call_duration_seconds=final_state_dict.get("call_duration_seconds", 0),
+                    metadata=final_state_dict.get("metadata", {}),
+                )
+                logger.info(f"[{state.session_id}] Booking session completed")
+                return state_obj
+            else:
+                logger.info(f"[{state.session_id}] Booking session completed")
+                return final_state_dict
         except Exception as e:
             logger.error(f"[{state.session_id}] Workflow execution failed: {e}")
             state.add_error(f"Workflow error: {str(e)}")
