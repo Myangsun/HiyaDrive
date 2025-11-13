@@ -33,7 +33,7 @@ class PlacesService:
         self, cuisine_type: str, location: str, party_size: int = 2
     ) -> List[Restaurant]:
         """
-        Search for restaurants matching criteria.
+        Search for restaurants matching criteria using Google Places API.
 
         Args:
             cuisine_type: Type of cuisine (e.g., "Italian")
@@ -42,10 +42,16 @@ class PlacesService:
 
         Returns:
             List of Restaurant objects
+
+        Raises:
+            ValueError: If API key is not set
+            Exception: If Google Places API call fails
         """
         if not self.api_key:
-            logger.warning("Google Places API key not set, returning empty results")
-            return []
+            raise ValueError(
+                "GOOGLE_PLACES_API_KEY must be set in .env\n"
+                "See setup instructions in README.md for enabling Google Places API"
+            )
 
         try:
             import aiohttp
@@ -53,7 +59,7 @@ class PlacesService:
             query = f"{cuisine_type} restaurants in {location}"
             logger.info(f"Searching Google Places for: {query}")
 
-            # Use Google Places Text Search API
+            # Use Google Places Text Search API (Legacy)
             url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
             params = {
                 "query": query,
@@ -61,42 +67,66 @@ class PlacesService:
             }
 
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params) as response:
+                async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as response:
                     if response.status != 200:
-                        logger.error(f"Google Places API error: {response.status}")
-                        return []
+                        raise Exception(
+                            f"Google Places API HTTP error: {response.status}"
+                        )
 
                     data = await response.json()
 
                     if data.get("status") != "OK":
-                        logger.warning(
-                            f"Google Places API status: {data.get('status')}"
+                        error_msg = data.get(
+                            "error_message", data.get("status"))
+                        raise Exception(
+                            f"Google Places API error: {error_msg}\n"
+                            "Make sure the Places API is enabled in Google Cloud Console: "
+                            "https://console.cloud.google.com/apis/library/places-backend.googleapis.com"
                         )
-                        return []
 
                     restaurants = []
                     for result in data.get("results", [])[:5]:  # Top 5 results
                         try:
+                            # Extract phone number - may require additional Place Details API call
+                            phone = result.get("formatted_phone_number", "")
+
+                            # If phone not in text search result, try to get from place_id
+                            if not phone and result.get("place_id"):
+                                phone = await self._get_phone_from_place_details(
+                                    result.get("place_id")
+                                )
+
                             restaurant = Restaurant(
                                 name=result.get("name", ""),
-                                phone=result.get("formatted_phone_number", ""),
+                                phone=phone,
                                 address=result.get("formatted_address", ""),
                                 rating=result.get("rating", 0.0),
                             )
+
+                            if not restaurant.phone:
+                                logger.warning(
+                                    f"Restaurant '{restaurant.name}' has no phone number. "
+                                    "Consider enabling the Place Details API for phone numbers."
+                                )
+
                             restaurants.append(restaurant)
                         except Exception as e:
-                            logger.warning(f"Error parsing restaurant result: {e}")
+                            logger.warning(
+                                f"Error parsing restaurant result: {e}")
                             continue
+
+                    if not restaurants:
+                        raise Exception(
+                            f"No restaurants found for '{query}' in Google Places API"
+                        )
 
                     logger.info(f"Found {len(restaurants)} restaurants")
                     return restaurants
 
         except ImportError:
-            logger.error("aiohttp not installed. Install: pip install aiohttp")
-            return []
-        except Exception as e:
-            logger.error(f"Error searching restaurants: {e}")
-            return []
+            raise Exception(
+                "aiohttp not installed. Install with: pip install aiohttp"
+            )
 
 
 # Global places service instance

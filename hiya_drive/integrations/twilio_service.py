@@ -48,10 +48,20 @@ class TwilioService:
 
         Returns:
             Call SID if successful, None otherwise
+
+        Raises:
+            ValueError: If phone number is missing or invalid
         """
         if not self.client:
             logger.warning("Twilio client not initialized")
             return None
+
+        # Validate phone number
+        if not to_number or not to_number.strip():
+            raise ValueError(
+                "Restaurant phone number is missing. "
+                "Make sure Google Places API is returning phone numbers."
+            )
 
         try:
             logger.info(f"Initiating Twilio call to {to_number}")
@@ -78,7 +88,7 @@ class TwilioService:
 
         except Exception as e:
             logger.error(f"Error making Twilio call: {e}")
-            return None
+            raise
 
     async def get_call_status(self, call_sid: str) -> Optional[str]:
         """

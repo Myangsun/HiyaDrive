@@ -186,13 +186,21 @@ class ElevenLabsTTS(TTSProvider):
     def __init__(self):
         """Initialize ElevenLabs client."""
         try:
-            from elevenlabs import ElevenLabs
+            import elevenlabs
+            from elevenlabs import VoiceSettings
         except ImportError:
             raise ImportError(
                 "elevenlabs not installed. Install with: pip install elevenlabs"
             )
 
-        self.client = ElevenLabs(api_key=settings.elevenlabs_api_key)
+        if not settings.elevenlabs_api_key:
+            raise ValueError("ELEVENLABS_API_KEY must be set for ElevenLabs TTS")
+
+        # Set API key via environment variable for module-level calls
+        import os
+        os.environ["ELEVENLABS_API_KEY"] = settings.elevenlabs_api_key
+
+        self.api_key = settings.elevenlabs_api_key
         self.voice_id = settings.elevenlabs_voice_id
 
     async def synthesize(self, text: str) -> bytes:
@@ -200,13 +208,34 @@ class ElevenLabsTTS(TTSProvider):
         logger.info(f"ElevenLabs: Synthesizing '{text}'")
 
         try:
-            audio = self.client.generate(
+            import elevenlabs
+            from elevenlabs import VoiceSettings
+            import os
+
+            # Ensure API key is set in environment
+            os.environ["ELEVENLABS_API_KEY"] = self.api_key
+
+            # Use text_to_speech.stream for streaming audio
+            audio_stream = elevenlabs.text_to_speech.stream(
+                voice_id=self.voice_id,
+                output_format="mp3_22050_32",
                 text=text,
-                voice=self.voice_id,
-                model="eleven_turbo_v2_5",
+                model_id="eleven_turbo_v2_5",
+                voice_settings=VoiceSettings(
+                    stability=0.0,
+                    similarity_boost=1.0,
+                    style=0.0,
+                    use_speaker_boost=True,
+                    speed=1.0,
+                ),
             )
 
-            audio_bytes = b"".join(audio)
+            # Collect audio chunks from stream
+            audio_bytes = b""
+            for chunk in audio_stream:
+                if chunk:
+                    audio_bytes += chunk
+
             logger.info(f"ElevenLabs: Synthesis complete ({len(audio_bytes)} bytes)")
 
             return audio_bytes

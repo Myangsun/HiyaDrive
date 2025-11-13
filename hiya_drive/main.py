@@ -57,7 +57,8 @@ async def _run_demo(utterance: Optional[str], driver_id: str, interactive: bool)
     """Run the demo asynchronously."""
 
     click.secho("\n" + "=" * 70, fg="cyan", bold=True)
-    click.secho("   HiyaDrive - Voice Booking Agent for Drivers", fg="cyan", bold=True)
+    click.secho("   HiyaDrive - Voice Booking Agent for Drivers",
+                fg="cyan", bold=True)
     click.secho("=" * 70 + "\n", fg="cyan", bold=True)
 
     click.echo(f"Demo Mode: {settings.demo_mode}")
@@ -69,7 +70,8 @@ async def _run_demo(utterance: Optional[str], driver_id: str, interactive: bool)
     if interactive:
         click.echo("🎤 Interactive Mode - Listening to microphone...")
         click.echo(f"   Recording for {settings.voice_timeout} seconds...")
-        click.echo("   Say: 'Book a table for X at [cuisine] on [date] at [time]'")
+        click.echo(
+            "   Say: 'Book a table for X at [cuisine] on [date] at [time]'")
         click.echo()
 
         utterance = await voice_processor.listen_and_transcribe(
@@ -119,12 +121,15 @@ async def _run_demo(utterance: Optional[str], driver_id: str, interactive: bool)
         if final_state.booking_confirmed:
             click.secho("✅ BOOKING CONFIRMED", fg="green", bold=True)
             click.echo()
-            click.echo(f"  Restaurant:        {final_state.selected_restaurant.name}")
-            click.echo(f"  Phone:             {final_state.selected_restaurant.phone}")
+            click.echo(
+                f"  Restaurant:        {final_state.selected_restaurant.name}")
+            click.echo(
+                f"  Phone:             {final_state.selected_restaurant.phone}")
             click.echo(f"  Party Size:        {final_state.party_size}")
             click.echo(f"  Date:              {final_state.requested_date}")
             click.echo(f"  Time:              {final_state.requested_time}")
-            click.echo(f"  Confirmation #:    {final_state.confirmation_number}")
+            click.echo(
+                f"  Confirmation #:    {final_state.confirmation_number}")
             click.echo()
 
             # Speak confirmation
@@ -186,7 +191,8 @@ async def _run_voice_mode(driver_id: str):
     """Run HiyaDrive in voice-first mode with wake word detection."""
 
     click.secho("\n" + "=" * 70, fg="cyan", bold=True)
-    click.secho("   HiyaDrive - Voice Mode (Wake Word Enabled)", fg="cyan", bold=True)
+    click.secho("   HiyaDrive - Voice Mode (Wake Word Enabled)",
+                fg="cyan", bold=True)
     click.secho("=" * 70 + "\n", fg="cyan", bold=True)
 
     click.echo(f"Driver ID: {driver_id}")
@@ -196,7 +202,7 @@ async def _run_voice_mode(driver_id: str):
     try:
         # Listen for wake word
         click.secho("🎤 Listening for wake word...", fg="yellow")
-        click.echo("   Say 'hiya' to activate HiyaDrive")
+        click.echo("   Say 'hiya driver' to activate HiyaDrive")
         click.echo()
 
         detected = await wake_word_detector.listen_for_wake_word_and_greet(timeout=120)
@@ -252,12 +258,15 @@ async def _run_voice_mode(driver_id: str):
         if final_state.booking_confirmed:
             click.secho("✅ BOOKING CONFIRMED", fg="green", bold=True)
             click.echo()
-            click.echo(f"  Restaurant:        {final_state.selected_restaurant.name}")
-            click.echo(f"  Phone:             {final_state.selected_restaurant.phone}")
+            click.echo(
+                f"  Restaurant:        {final_state.selected_restaurant.name}")
+            click.echo(
+                f"  Phone:             {final_state.selected_restaurant.phone}")
             click.echo(f"  Party Size:        {final_state.party_size}")
             click.echo(f"  Date:              {final_state.requested_date}")
             click.echo(f"  Time:              {final_state.requested_time}")
-            click.echo(f"  Confirmation #:    {final_state.confirmation_number}")
+            click.echo(
+                f"  Confirmation #:    {final_state.confirmation_number}")
             click.echo()
 
             # Speak confirmation
@@ -302,7 +311,8 @@ def test_audio():
 
     click.echo()
     click.secho("Testing speaker...", fg="yellow")
-    audio_io.play_text_as_audio("Hello! This is HiyaDrive. Testing audio output.")
+    audio_io.play_text_as_audio(
+        "Hello! This is HiyaDrive. Testing audio output.")
 
     click.secho("\n✅ Audio test complete", fg="green")
 
