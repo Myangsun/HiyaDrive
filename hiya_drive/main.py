@@ -8,7 +8,7 @@ import click
 from datetime import datetime
 from typing import Optional
 
-from hiya_drive.core.orchestrator import orchestrator
+from hiya_drive.core.interactive_voice_orchestrator import interactive_voice_orchestrator
 from hiya_drive.voice.voice_processor import voice_processor
 from hiya_drive.voice.audio_io import audio_io
 from hiya_drive.voice.wake_word_detector import wake_word_detector
@@ -100,7 +100,7 @@ async def _run_demo(utterance: Optional[str], driver_id: str, interactive: bool)
     click.secho("▶ Starting booking workflow...\n", fg="yellow")
 
     try:
-        final_state = await orchestrator.run_booking_session(
+        final_state = await interactive_voice_orchestrator.run_interactive_voice_booking(
             driver_id=driver_id,
             initial_utterance=utterance,
         )
@@ -237,7 +237,7 @@ async def _run_voice_mode(driver_id: str):
         # Run the booking workflow
         click.secho("▶ Processing your request...\n", fg="yellow")
 
-        final_state = await orchestrator.run_booking_session(
+        final_state = await interactive_voice_orchestrator.run_interactive_voice_booking(
             driver_id=driver_id,
             initial_utterance=utterance,
         )

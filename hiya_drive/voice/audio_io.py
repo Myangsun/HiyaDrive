@@ -49,7 +49,7 @@ class MacAudioIO:
 
         try:
             self.input_stream = self.pyaudio.open(
-                format=pyaudio.paFloat32,
+                format=pyaudio.paInt16,  # Use same format as output (PCM int16)
                 channels=self.channels,
                 rate=self.sample_rate,
                 input=True,
@@ -57,7 +57,7 @@ class MacAudioIO:
             )
             self.is_listening = True
             logger.info(
-                f"Started listening: {self.sample_rate}Hz, {self.channels} channel(s)"
+                f"Started listening: {self.sample_rate}Hz, {self.channels} channel(s), PCM int16"
             )
 
             # Start listening thread
@@ -89,7 +89,7 @@ class MacAudioIO:
                 data = self.input_stream.read(
                     self.chunk_size, exception_on_overflow=False
                 )
-                audio_data = np.frombuffer(data, dtype=np.float32)
+                audio_data = np.frombuffer(data, dtype=np.int16)  # int16 to match output format
                 self.audio_queue.put(audio_data)
             except Exception as e:
                 logger.error(f"Error reading from microphone: {e}")
@@ -108,20 +108,21 @@ class MacAudioIO:
     ) -> bytes:
         """
         Record audio for specified duration.
+        Uses PCM int16 format matching output for consistency.
 
         Args:
             duration: Recording duration in seconds
             on_chunk: Optional callback for each chunk
 
         Returns:
-            Audio data as bytes
+            Audio data as bytes (PCM int16 format)
         """
-        logger.info(f"Recording for {duration} seconds...")
+        logger.info(f"Recording for {duration} seconds (PCM int16)...")
         frames = []
 
         try:
             stream_kwargs = {
-                "format": pyaudio.paFloat32,
+                "format": pyaudio.paInt16,  # Use same format as output (PCM int16)
                 "channels": self.channels,
                 "rate": self.sample_rate,
                 "input": True,
@@ -142,7 +143,7 @@ class MacAudioIO:
                 frames.append(data)
 
                 if on_chunk:
-                    audio_array = np.frombuffer(data, dtype=np.float32)
+                    audio_array = np.frombuffer(data, dtype=np.int16)  # int16 format
                     on_chunk(audio_array)
 
             stream.stop_stream()
@@ -150,7 +151,7 @@ class MacAudioIO:
 
             # Convert to bytes
             audio_bytes = b"".join(frames)
-            logger.info(f"Recording complete: {len(audio_bytes)} bytes")
+            logger.info(f"Recording complete: {len(audio_bytes)} bytes (PCM int16)")
 
             return audio_bytes
 
@@ -216,17 +217,17 @@ class MacAudioIO:
             logger.warning("Text-to-speech only supported on macOS in demo mode")
 
     def save_audio(self, audio_data: bytes, filepath: Path) -> None:
-        """Save audio data to file."""
+        """Save audio data to file (PCM int16 format)."""
         try:
             import wave
 
             with wave.open(str(filepath), "wb") as wav_file:
                 wav_file.setnchannels(self.channels)
-                wav_file.setsampwidth(self.pyaudio.get_sample_size(pyaudio.paFloat32))
+                wav_file.setsampwidth(self.pyaudio.get_sample_size(pyaudio.paInt16))  # int16
                 wav_file.setframerate(self.sample_rate)
                 wav_file.writeframes(audio_data)
 
-            logger.info(f"Audio saved to {filepath}")
+            logger.info(f"Audio saved to {filepath} (PCM int16)")
 
         except Exception as e:
             logger.error(f"Error saving audio: {e}")

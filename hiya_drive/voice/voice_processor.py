@@ -114,18 +114,18 @@ class ElevenLabsSTT(STTProvider):
 
     async def transcribe(self, audio_data: bytes) -> str:
         """Transcribe using ElevenLabs Speech-to-Text API."""
-        logger.info(f"ElevenLabs STT: Transcribing {len(audio_data)} bytes")
+        logger.info(f"ElevenLabs STT: Transcribing {len(audio_data)} bytes (PCM int16)")
 
         try:
             import io
             import wave
 
-            # Convert raw PCM bytes to WAV format
-            # Audio was recorded as float32 at 16000 Hz, mono
+            # Convert raw PCM int16 bytes to WAV format
+            # Audio is recorded as PCM int16 at 16000 Hz, mono
             wav_buffer = io.BytesIO()
             with wave.open(wav_buffer, "wb") as wav_file:
                 wav_file.setnchannels(settings.channels)
-                wav_file.setsampwidth(4)  # 4 bytes for float32
+                wav_file.setsampwidth(2)  # 2 bytes for int16 (was 4 bytes for float32)
                 wav_file.setframerate(settings.sample_rate)
                 wav_file.writeframes(audio_data)
 
