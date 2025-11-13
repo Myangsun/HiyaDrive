@@ -161,25 +161,29 @@ class MacAudioIO:
     async def play_audio(self, audio_data: bytes, blocking: bool = True) -> None:
         """
         Play audio through speaker.
+        Handles PCM int16 format from ElevenLabs TTS.
 
         Args:
-            audio_data: Audio data as bytes
+            audio_data: Audio data as bytes (PCM int16 or float32)
             blocking: Wait for playback to complete
         """
         try:
             logger.info(f"Playing audio: {len(audio_data)} bytes")
 
             stream = self.pyaudio.open(
-                format=pyaudio.paFloat32,
+                format=pyaudio.paInt16,  # PCM int16 format from ElevenLabs
                 channels=self.channels,
                 rate=self.sample_rate,
                 output=True,
                 frames_per_buffer=self.chunk_size,
             )
 
-            # Play in chunks
-            for i in range(0, len(audio_data), self.chunk_size * 4):
-                chunk = audio_data[i : i + self.chunk_size * 4]
+            # Play in chunks (each frame is 2 bytes for int16)
+            bytes_per_frame = self.channels * 2  # 2 bytes per sample for int16
+            chunk_bytes = self.chunk_size * bytes_per_frame
+
+            for i in range(0, len(audio_data), chunk_bytes):
+                chunk = audio_data[i : i + chunk_bytes]
                 stream.write(chunk)
 
             if blocking:

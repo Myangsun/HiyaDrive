@@ -203,12 +203,13 @@ class ElevenLabsTTS(TTSProvider):
         logger.info(f"ElevenLabs: Synthesizing '{text}'")
 
         try:
-            # Use client.generate method for TTS
+            # Use PCM format for clean audio without ID3 tags
+            # PCM 16-bit at 16kHz sample rate (matches our audio settings)
             audio_stream = self.client.text_to_speech.convert(
                 voice_id=self.voice_id,
-                output_format="mp3_22050_32",
                 text=text,
                 model_id="eleven_turbo_v2_5",
+                output_format="pcm_16000",  # PCM 16-bit at 16kHz
             )
 
             # Collect audio chunks from stream
