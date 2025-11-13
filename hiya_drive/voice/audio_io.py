@@ -86,7 +86,9 @@ class MacAudioIO:
         """Background thread loop for reading audio."""
         while self.is_listening:
             try:
-                data = self.input_stream.read(self.chunk_size, exception_on_overflow=False)
+                data = self.input_stream.read(
+                    self.chunk_size, exception_on_overflow=False
+                )
                 audio_data = np.frombuffer(data, dtype=np.float32)
                 self.audio_queue.put(audio_data)
             except Exception as e:
@@ -126,9 +128,7 @@ class MacAudioIO:
                 frames_per_buffer=self.chunk_size,
             )
 
-            chunks_needed = int(
-                (self.sample_rate / self.chunk_size) * duration
-            )
+            chunks_needed = int((self.sample_rate / self.chunk_size) * duration)
 
             for _ in range(chunks_needed):
                 data = stream.read(self.chunk_size, exception_on_overflow=False)

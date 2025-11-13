@@ -53,7 +53,9 @@ class TestBookingOrchestrator:
 
         # Should extract basic info
         assert result.party_size is not None or result.party_size == 2
-        assert result.cuisine_type is not None or "Italian" in (result.cuisine_type or "")
+        assert result.cuisine_type is not None or "Italian" in (
+            result.cuisine_type or ""
+        )
 
     @pytest.mark.asyncio
     async def test_check_calendar_node(self):
@@ -94,6 +96,7 @@ class TestBookingOrchestrator:
 
         # Add some candidates
         from hiya_drive.models.state import Restaurant
+
         sample_state.restaurant_candidates = [
             Restaurant(
                 name="Restaurant 1",

@@ -36,10 +36,7 @@ class TwilioService:
             logger.warning(f"Failed to initialize Twilio: {e}")
 
     async def make_call(
-        self,
-        to_number: str,
-        opening_script: str,
-        call_sid: Optional[str] = None
+        self, to_number: str, opening_script: str, call_sid: Optional[str] = None
     ) -> Optional[str]:
         """
         Make a phone call to a restaurant.

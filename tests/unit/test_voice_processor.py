@@ -32,7 +32,9 @@ class TestMockSTT:
         result3 = await stt.transcribe(b"audio3")
 
         # All should be valid non-empty strings
-        assert all(isinstance(r, str) and len(r) > 0 for r in [result1, result2, result3])
+        assert all(
+            isinstance(r, str) and len(r) > 0 for r in [result1, result2, result3]
+        )
 
 
 class TestMockTTS:

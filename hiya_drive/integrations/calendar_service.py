@@ -27,7 +27,9 @@ class CalendarService:
             import googleapiclient.discovery
 
             if not settings.google_calendar_credentials_path:
-                logger.warning("GOOGLE_CALENDAR_CREDENTIALS_PATH not set, calendar checks will always be available")
+                logger.warning(
+                    "GOOGLE_CALENDAR_CREDENTIALS_PATH not set, calendar checks will always be available"
+                )
                 return
 
             creds_path = Path(settings.google_calendar_credentials_path)
@@ -37,8 +39,7 @@ class CalendarService:
 
             # Load service account credentials
             credentials = Credentials.from_service_account_file(
-                creds_path,
-                scopes=["https://www.googleapis.com/auth/calendar.readonly"]
+                creds_path, scopes=["https://www.googleapis.com/auth/calendar.readonly"]
             )
 
             self.service = googleapiclient.discovery.build(
@@ -47,15 +48,13 @@ class CalendarService:
             logger.info("Google Calendar service initialized successfully")
 
         except ImportError:
-            logger.warning("Google client libraries not installed. Install: pip install google-auth-oauthlib google-auth-httplib2 google-api-python-client")
+            logger.warning(
+                "Google client libraries not installed. Install: pip install google-auth-oauthlib google-auth-httplib2 google-api-python-client"
+            )
         except Exception as e:
             logger.warning(f"Failed to initialize Google Calendar: {e}")
 
-    async def is_available(
-        self,
-        start_time: str,
-        duration_minutes: int = 120
-    ) -> bool:
+    async def is_available(self, start_time: str, duration_minutes: int = 120) -> bool:
         """
         Check if driver is available at given time.
 

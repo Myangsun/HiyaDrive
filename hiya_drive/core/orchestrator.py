@@ -95,7 +95,8 @@ class BookingOrchestrator:
 
             # Extract party size
             import re
-            party_match = re.search(r'(\d+)\s+(?:people|person|for)', utterance)
+
+            party_match = re.search(r"(\d+)\s+(?:people|person|for)", utterance)
             if party_match:
                 state.party_size = int(party_match.group(1))
             else:
@@ -112,7 +113,8 @@ class BookingOrchestrator:
             # Extract location
             if "near" in utterance:
                 import re
-                loc_match = re.search(r'near\s+(\w+)', utterance)
+
+                loc_match = re.search(r"near\s+(\w+)", utterance)
                 state.location = loc_match.group(1) if loc_match else "Boston"
             else:
                 state.location = "Boston"
@@ -126,7 +128,7 @@ class BookingOrchestrator:
                 state.requested_date = "2024-11-22"
 
             # Extract time
-            time_match = re.search(r'(\d{1,2})\s*(?:pm|am|:00)', utterance)
+            time_match = re.search(r"(\d{1,2})\s*(?:pm|am|:00)", utterance)
             if time_match:
                 hour = int(time_match.group(1))
                 if "pm" in utterance and hour < 12:
@@ -207,15 +209,23 @@ class BookingOrchestrator:
             # Use Google Calendar API
             try:
                 booking_time = f"{state.requested_date} at {state.requested_time}"
-                state.driver_calendar_free = await calendar_service.is_available(booking_time)
-                logger.info(f"[{state.session_id}] Calendar: {'Available' if state.driver_calendar_free else 'Busy'}")
+                state.driver_calendar_free = await calendar_service.is_available(
+                    booking_time
+                )
+                logger.info(
+                    f"[{state.session_id}] Calendar: {'Available' if state.driver_calendar_free else 'Busy'}"
+                )
             except Exception as e:
-                logger.warning(f"[{state.session_id}] Calendar check failed: {e}, assuming available")
+                logger.warning(
+                    f"[{state.session_id}] Calendar check failed: {e}, assuming available"
+                )
                 state.driver_calendar_free = True
 
         return state
 
-    async def search_restaurants(self, state: DrivingBookingState) -> DrivingBookingState:
+    async def search_restaurants(
+        self, state: DrivingBookingState
+    ) -> DrivingBookingState:
         """Search for restaurants matching criteria."""
         logger.info(
             f"[{state.session_id}] Searching for {state.cuisine_type} restaurants in {state.location}"
@@ -245,17 +255,21 @@ class BookingOrchestrator:
                 ),
             ]
             state.restaurant_candidates = mock_restaurants
-            logger.info(f"[{state.session_id}] Found {len(mock_restaurants)} restaurants (mocked)")
+            logger.info(
+                f"[{state.session_id}] Found {len(mock_restaurants)} restaurants (mocked)"
+            )
         else:
             # Use Google Places API
             try:
                 restaurants = await places_service.search_restaurants(
                     cuisine_type=state.cuisine_type,
                     location=state.location,
-                    party_size=state.party_size
+                    party_size=state.party_size,
                 )
                 state.restaurant_candidates = restaurants
-                logger.info(f"[{state.session_id}] Found {len(restaurants)} restaurants via Google Places")
+                logger.info(
+                    f"[{state.session_id}] Found {len(restaurants)} restaurants via Google Places"
+                )
             except Exception as e:
                 logger.error(f"[{state.session_id}] Restaurant search failed: {e}")
                 state.restaurant_candidates = []
@@ -292,7 +306,9 @@ class BookingOrchestrator:
                 f"Hello, I'd like to make a reservation for {state.party_size} "
                 f"on {state.requested_date} at {state.requested_time}."
             )
-            logger.info(f"[{state.session_id}] Call script (demo): {state.call_opening_script}")
+            logger.info(
+                f"[{state.session_id}] Call script (demo): {state.call_opening_script}"
+            )
             return state
 
         # Real API call when not in demo mode
@@ -346,13 +362,15 @@ Be natural and friendly. Format: [SCRIPT] your script here [END]"""
         if settings.use_mock_twilio or settings.demo_mode:
             state.twilio_call_sid = f"mock_call_{uuid.uuid4().hex[:8]}"
             state.call_connected = True
-            logger.info(f"[{state.session_id}] Call initiated (mocked): {state.twilio_call_sid}")
+            logger.info(
+                f"[{state.session_id}] Call initiated (mocked): {state.twilio_call_sid}"
+            )
         else:
             # Use real Twilio API
             try:
                 call_sid = await twilio_service.make_call(
                     to_number=state.selected_restaurant.phone,
-                    opening_script=state.call_opening_script
+                    opening_script=state.call_opening_script,
                 )
                 if call_sid:
                     state.twilio_call_sid = call_sid
@@ -385,7 +403,9 @@ Be natural and friendly. Format: [SCRIPT] your script here [END]"""
             state.add_message("assistant", f"{state.party_size} people please.")
             state.add_message("restaurant", "Sure! What name for the reservation?")
             state.add_message("assistant", "Alex")
-            state.add_message("restaurant", "Perfect! Your confirmation number is 4892.")
+            state.add_message(
+                "restaurant", "Perfect! Your confirmation number is 4892."
+            )
 
             state.confirmation_number = "4892"
             state.booking_confirmed = True
@@ -424,14 +444,18 @@ Be natural and friendly. Format: [SCRIPT] your script here [END]"""
 
     async def handle_error(self, state: DrivingBookingState) -> DrivingBookingState:
         """Handle errors with retry or fallback."""
-        logger.error(f"[{state.session_id}] Error handler called. Errors: {state.errors}")
+        logger.error(
+            f"[{state.session_id}] Error handler called. Errors: {state.errors}"
+        )
 
         if state.can_retry():
             state.increment_retry()
             logger.info(f"[{state.session_id}] Retrying (attempt {state.retry_count})")
         else:
             state.status = SessionStatus.FAILED
-            logger.error(f"[{state.session_id}] Max retries exceeded, marking as failed")
+            logger.error(
+                f"[{state.session_id}] Max retries exceeded, marking as failed"
+            )
 
         return state
 
@@ -439,9 +463,9 @@ Be natural and friendly. Format: [SCRIPT] your script here [END]"""
     # Conditional Routing Functions
     # =========================================================================
 
-    def route_conversation(self, state: DrivingBookingState) -> Literal[
-        "booking_confirmed", "need_alternatives", "error", "timeout"
-    ]:
+    def route_conversation(
+        self, state: DrivingBookingState
+    ) -> Literal["booking_confirmed", "need_alternatives", "error", "timeout"]:
         """Route based on conversation outcome."""
         if state.booking_confirmed:
             return "booking_confirmed"
@@ -505,8 +529,12 @@ Be natural and friendly. Format: [SCRIPT] your script here [END]"""
                     cuisine_type=final_state_dict.get("cuisine_type"),
                     location=final_state_dict.get("location"),
                     driver_location=final_state_dict.get("driver_location"),
-                    driver_calendar_free=final_state_dict.get("driver_calendar_free", False),
-                    restaurant_candidates=final_state_dict.get("restaurant_candidates", []),
+                    driver_calendar_free=final_state_dict.get(
+                        "driver_calendar_free", False
+                    ),
+                    restaurant_candidates=final_state_dict.get(
+                        "restaurant_candidates", []
+                    ),
                     selected_restaurant=final_state_dict.get("selected_restaurant"),
                     confirmation_number=final_state_dict.get("confirmation_number"),
                     booking_confirmed=final_state_dict.get("booking_confirmed", False),
@@ -519,10 +547,14 @@ Be natural and friendly. Format: [SCRIPT] your script here [END]"""
                     turn_count=final_state_dict.get("turn_count", 0),
                     last_utterance=final_state_dict.get("last_utterance"),
                     messages=final_state_dict.get("messages", []),
-                    conversation_history=final_state_dict.get("conversation_history", []),
+                    conversation_history=final_state_dict.get(
+                        "conversation_history", []
+                    ),
                     twilio_call_sid=final_state_dict.get("twilio_call_sid"),
                     call_connected=final_state_dict.get("call_connected", False),
-                    call_duration_seconds=final_state_dict.get("call_duration_seconds", 0),
+                    call_duration_seconds=final_state_dict.get(
+                        "call_duration_seconds", 0
+                    ),
                     metadata=final_state_dict.get("metadata", {}),
                 )
                 logger.info(f"[{state.session_id}] Booking session completed")

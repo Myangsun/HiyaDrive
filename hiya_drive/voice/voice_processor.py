@@ -63,7 +63,9 @@ class DeepgramSTT(STTProvider):
         try:
             from deepgram import Deepgram
         except ImportError:
-            raise ImportError("deepgram-sdk not installed. Install with: pip install deepgram-sdk")
+            raise ImportError(
+                "deepgram-sdk not installed. Install with: pip install deepgram-sdk"
+            )
 
         self.dg = Deepgram(settings.deepgram_api_key)
 
@@ -81,7 +83,9 @@ class DeepgramSTT(STTProvider):
                 },
             )
 
-            transcript = response["results"]["channels"][0]["alternatives"][0]["transcript"]
+            transcript = response["results"]["channels"][0]["alternatives"][0][
+                "transcript"
+            ]
             logger.info(f"Deepgram: Transcribed -> '{transcript}'")
 
             return transcript
@@ -99,7 +103,9 @@ class ElevenLabsSTT(STTProvider):
         try:
             from elevenlabs.client import ElevenLabs
         except ImportError:
-            raise ImportError("elevenlabs not installed. Install with: pip install elevenlabs")
+            raise ImportError(
+                "elevenlabs not installed. Install with: pip install elevenlabs"
+            )
 
         if not settings.elevenlabs_api_key:
             raise ValueError("ELEVENLABS_API_KEY must be set for ElevenLabs STT")
@@ -118,7 +124,7 @@ class ElevenLabsSTT(STTProvider):
             # Convert raw PCM bytes to WAV format
             # Audio was recorded as float32 at 16000 Hz, mono
             wav_buffer = io.BytesIO()
-            with wave.open(wav_buffer, 'wb') as wav_file:
+            with wave.open(wav_buffer, "wb") as wav_file:
                 wav_file.setnchannels(settings.channels)
                 wav_file.setsampwidth(4)  # 4 bytes for float32
                 wav_file.setframerate(settings.sample_rate)
@@ -136,10 +142,10 @@ class ElevenLabsSTT(STTProvider):
 
             # Extract transcript from response object
             transcript = ""
-            if hasattr(transcription, 'text'):
+            if hasattr(transcription, "text"):
                 transcript = transcription.text
-            elif isinstance(transcription, dict) and 'text' in transcription:
-                transcript = transcription['text']
+            elif isinstance(transcription, dict) and "text" in transcription:
+                transcript = transcription["text"]
             else:
                 transcript = str(transcription)
 
@@ -165,6 +171,7 @@ class MockTTS(TTSProvider):
 
         # Simulate TTS by using macOS say command
         from hiya_drive.voice.audio_io import audio_io
+
         audio_io.play_text_as_audio(text)
 
         # Return dummy audio bytes
@@ -182,7 +189,9 @@ class ElevenLabsTTS(TTSProvider):
         try:
             from elevenlabs import ElevenLabs
         except ImportError:
-            raise ImportError("elevenlabs not installed. Install with: pip install elevenlabs")
+            raise ImportError(
+                "elevenlabs not installed. Install with: pip install elevenlabs"
+            )
 
         self.client = ElevenLabs(api_key=settings.elevenlabs_api_key)
         self.voice_id = settings.elevenlabs_voice_id
@@ -258,6 +267,7 @@ class VoiceProcessor:
             audio_data = await self.synthesize_text(text)
 
             from hiya_drive.voice.audio_io import audio_io
+
             await audio_io.play_audio(audio_data, blocking=True)
 
         except Exception as e:
@@ -269,6 +279,7 @@ class VoiceProcessor:
 
         try:
             from hiya_drive.voice.audio_io import audio_io
+
             audio_data = await audio_io.record_audio(duration)
             transcript = await self.transcribe_audio(audio_data)
             return transcript

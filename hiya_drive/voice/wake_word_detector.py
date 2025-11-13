@@ -91,6 +91,7 @@ class WakeWordDetector:
         ]
 
         import random
+
         greeting = random.choice(greetings)
 
         logger.info(f"Greeting user: {greeting}")

@@ -42,9 +42,7 @@ class Settings(BaseSettings):
     # Database
     # =========================================================================
 
-    database_url: str = Field(
-        default="sqlite:///./hiya_drive.db", env="DATABASE_URL"
-    )
+    database_url: str = Field(default="sqlite:///./hiya_drive.db", env="DATABASE_URL")
     database_echo: bool = False
 
     # =========================================================================
@@ -62,7 +60,9 @@ class Settings(BaseSettings):
     # =========================================================================
 
     wake_word: str = Field(default="hiya", env="WAKE_WORD")
-    enable_wake_word_detection: bool = Field(default=True, env="ENABLE_WAKE_WORD_DETECTION")
+    enable_wake_word_detection: bool = Field(
+        default=True, env="ENABLE_WAKE_WORD_DETECTION"
+    )
     wake_word_sensitivity: float = Field(default=0.5, env="WAKE_WORD_SENSITIVITY")
 
     # =========================================================================

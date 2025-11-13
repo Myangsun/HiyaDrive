@@ -30,10 +30,7 @@ class PlacesService:
             logger.warning(f"Failed to initialize Google Places: {e}")
 
     async def search_restaurants(
-        self,
-        cuisine_type: str,
-        location: str,
-        party_size: int = 2
+        self, cuisine_type: str, location: str, party_size: int = 2
     ) -> List[Restaurant]:
         """
         Search for restaurants matching criteria.
@@ -72,7 +69,9 @@ class PlacesService:
                     data = await response.json()
 
                     if data.get("status") != "OK":
-                        logger.warning(f"Google Places API status: {data.get('status')}")
+                        logger.warning(
+                            f"Google Places API status: {data.get('status')}"
+                        )
                         return []
 
                     restaurants = []

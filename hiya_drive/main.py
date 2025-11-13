@@ -111,7 +111,9 @@ async def _run_demo(utterance: Optional[str], driver_id: str, interactive: bool)
         click.echo()
         click.echo(f"Session ID:          {final_state.session_id}")
         click.echo(f"Status:              {final_state.status.value.upper()}")
-        click.echo(f"Duration:            ~{(datetime.now() - final_state.start_time).total_seconds():.1f}s")
+        click.echo(
+            f"Duration:            ~{(datetime.now() - final_state.start_time).total_seconds():.1f}s"
+        )
         click.echo()
 
         if final_state.booking_confirmed:
@@ -151,6 +153,7 @@ async def _run_demo(utterance: Optional[str], driver_id: str, interactive: bool)
                 click.echo()
                 state_dict = final_state.to_dict()
                 import json
+
                 click.echo(json.dumps(state_dict, indent=2))
         except click.exceptions.Abort:
             # Non-interactive mode or user cancelled
@@ -241,7 +244,9 @@ async def _run_voice_mode(driver_id: str):
         click.echo()
         click.echo(f"Session ID:          {final_state.session_id}")
         click.echo(f"Status:              {final_state.status.value.upper()}")
-        click.echo(f"Duration:            ~{(datetime.now() - final_state.start_time).total_seconds():.1f}s")
+        click.echo(
+            f"Duration:            ~{(datetime.now() - final_state.start_time).total_seconds():.1f}s"
+        )
         click.echo()
 
         if final_state.booking_confirmed:
@@ -310,6 +315,7 @@ async def _test_microphone():
 
         # Save recording
         from pathlib import Path
+
         recording_file = settings.recordings_dir / "test_recording.wav"
         audio_io.save_audio(audio_data, recording_file)
 
@@ -376,8 +382,12 @@ def status():
 
     click.secho("API Configuration:", fg="yellow", bold=True)
     click.echo(f"  LLM Model:         {settings.llm_model}")
-    click.echo(f"  STT Provider:      {'Mock' if settings.use_mock_stt else 'Deepgram'}")
-    click.echo(f"  TTS Provider:      {'Mock' if settings.use_mock_tts else 'ElevenLabs'}")
+    click.echo(
+        f"  STT Provider:      {'Mock' if settings.use_mock_stt else 'Deepgram'}"
+    )
+    click.echo(
+        f"  TTS Provider:      {'Mock' if settings.use_mock_tts else 'ElevenLabs'}"
+    )
     click.echo()
 
     click.secho("Voice Settings:", fg="yellow", bold=True)
