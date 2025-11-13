@@ -305,7 +305,7 @@ class LLMMessageGenerator:
     async def generate_goodbye(self) -> str:
         """Generate a brief goodbye message."""
         # Simple, short goodbye - no LLM generation needed
-        goodbye = "Goodbye!"
+        goodbye = "Is there anything else I could help?"
         logger.info(f"Goodbye: {goodbye}")
         return goodbye
 

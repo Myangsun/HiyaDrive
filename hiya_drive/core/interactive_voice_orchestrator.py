@@ -506,7 +506,6 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
                 )
                 goodbye = await message_generator.generate_goodbye()
                 await voice_processor.speak(goodbye)
-                await asyncio.sleep(0.5)
 
         except Exception as e:
             logger.error(f"[{state.session_id}] Error in interactive booking: {e}")
@@ -520,7 +519,6 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
             try:
                 goodbye = await message_generator.generate_goodbye()
                 await voice_processor.speak(goodbye)
-                await asyncio.sleep(0.5)
             except Exception as goodbye_error:
                 logger.warning(f"Could not say goodbye: {goodbye_error}")
 
