@@ -276,18 +276,29 @@ class BookingOrchestrator:
         return state
 
     async def select_restaurant(
-        self, state: DrivingBookingState
+        self, state: DrivingBookingState, user_choice: int = None
     ) -> DrivingBookingState:
-        """Select a restaurant from candidates."""
+        """
+        Select a restaurant from candidates.
+
+        Args:
+            state: Current booking state
+            user_choice: User's preferred restaurant option (1-3), or None to auto-select
+        """
         logger.info(f"[{state.session_id}] Selecting restaurant")
 
         if not state.restaurant_candidates:
             state.add_error("No restaurants found")
             return state
 
-        # Auto-select first restaurant for MVP
-        state.selected_restaurant = state.restaurant_candidates[0]
-        logger.info(f"[{state.session_id}] Selected: {state.selected_restaurant.name}")
+        # If user specified a choice, use it (1-indexed)
+        if user_choice is not None and 1 <= user_choice <= len(state.restaurant_candidates):
+            state.selected_restaurant = state.restaurant_candidates[user_choice - 1]
+            logger.info(f"[{state.session_id}] User selected option {user_choice}: {state.selected_restaurant.name}")
+        else:
+            # Default: auto-select highest-rated restaurant
+            state.selected_restaurant = state.restaurant_candidates[0]
+            logger.info(f"[{state.session_id}] Auto-selected highest-rated: {state.selected_restaurant.name}")
 
         return state
 

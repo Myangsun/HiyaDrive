@@ -301,31 +301,11 @@ class LLMMessageGenerator:
             )
 
     async def generate_goodbye(self) -> str:
-        """Generate a friendly goodbye message."""
-        logger.info("Generating goodbye message with LLM")
-
-        try:
-            message = self.client.messages.create(
-                model=self.model,
-                max_tokens=100,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": (
-                            "Generate a brief, warm goodbye message (1 sentence) from HiyaDrive "
-                            "wishing the user a great dining experience. Be friendly. Do not use quotes."
-                        ),
-                    }
-                ],
-            )
-
-            goodbye = message.content[0].text.strip()
-            logger.info(f"Generated goodbye: {goodbye}")
-            return goodbye
-
-        except Exception as e:
-            logger.error(f"Error generating goodbye: {e}")
-            return "Thanks for using HiyaDrive! Enjoy your meal!"
+        """Generate a brief goodbye message."""
+        # Simple, short goodbye - no LLM generation needed
+        goodbye = "Goodbye!"
+        logger.info(f"Goodbye: {goodbye}")
+        return goodbye
 
     async def generate_confirmation_request(self, step_name: str) -> str:
         """Generate a confirmation request for a specific step."""
@@ -465,6 +445,80 @@ Be strict: only extract clear corrections. "2." alone doesn't change party size.
         except Exception as e:
             logger.error(f"Error generating clarification: {e}")
             return f"Can you please tell me the {', '.join(missing_fields)}?"
+
+    async def extract_restaurant_selection(
+        self,
+        user_response: str,
+        num_options: int = 3,
+    ) -> dict:
+        """
+        Extract which restaurant option the user selected from their response.
+
+        Args:
+            user_response: User's spoken response (e.g., "I want option 1" or "the first one")
+            num_options: Number of restaurant options presented (1-3)
+
+        Returns:
+            dict with:
+            - selected_option: int (1-3) if user chose an option, None if unclear
+            - confidence: "high", "medium", or "low"
+            - feedback: brief explanation
+        """
+        logger.info(f"Extracting restaurant selection from: {user_response}")
+
+        try:
+            message = self.client.messages.create(
+                model=self.model,
+                max_tokens=150,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"""Analyze this user response and determine which restaurant option they selected.
+
+There are {num_options} options presented: Option 1, Option 2, Option 3 (if applicable).
+
+User said: "{user_response}"
+
+Return JSON with:
+- selected_option: integer (1, 2, or 3) if they clearly selected one, null if unclear
+- confidence: "high" if very clear, "medium" if probable, "low" if ambiguous
+- feedback: brief explanation (e.g., "Selected option 1", "Unclear selection", "No selection made")
+
+Be strict: "yeah" alone doesn't count as a selection. Look for explicit option numbers or phrases like "the first one", "option 2", "the middle option", etc.""",
+                    }
+                ],
+            )
+
+            import json
+            result_text = message.content[0].text.strip()
+
+            # Try to parse JSON
+            try:
+                start_idx = result_text.find('{')
+                end_idx = result_text.rfind('}') + 1
+                if start_idx >= 0 and end_idx > start_idx:
+                    json_str = result_text[start_idx:end_idx]
+                    result = json.loads(json_str)
+                else:
+                    result = json.loads(result_text)
+            except json.JSONDecodeError:
+                logger.warning(f"Could not parse restaurant selection JSON: {result_text}")
+                result = {
+                    "selected_option": None,
+                    "confidence": "low",
+                    "feedback": "Could not parse response"
+                }
+
+            logger.info(f"Extracted restaurant selection: {result}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error extracting restaurant selection: {e}")
+            return {
+                "selected_option": None,
+                "confidence": "low",
+                "feedback": f"Error parsing response: {str(e)}"
+            }
 
 
 # Global message generator instance

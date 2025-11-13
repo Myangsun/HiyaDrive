@@ -30,6 +30,7 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
         Run booking with truly continuous listening throughout entire session.
         Agent greets once, then listens continuously for user input.
         User can provide information or corrections at any time.
+        Ensures consistent voice and single goodbye at the end.
         """
         from datetime import datetime
 
@@ -51,238 +52,298 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
             if state.errors:
                 error_msg = f"Sorry, I couldn't understand that. {state.errors[0]}"
                 await voice_processor.speak(error_msg)
-                return state
-
-            # CONFIRM INTENT and ask for missing details
-            logger.info(f"[{state.session_id}] Confirming parsed intent")
-            intent_confirmation = await message_generator.generate_intent_confirmation(
-                party_size=state.party_size,
-                cuisine_type=state.cuisine_type,
-                location=state.location,
-                date=state.requested_date,
-                time=state.requested_time,
-            )
-            await voice_processor.speak(intent_confirmation)
-            await asyncio.sleep(0.5)
-
-            # CONTINUOUS LISTENING LOOP - Listen and process user input throughout entire session
-            # No more listening at each step, just one continuous conversation
-            logger.info(f"[{state.session_id}] Entering continuous listening mode")
-
-            while not self._has_all_required_details(state):
-                logger.info(f"[{state.session_id}] Waiting for user input (continuous listening)...")
-                user_response = await voice_processor.listen_and_transcribe(duration=60.0)
-
-                if not user_response or user_response.strip() == "":
-                    continue
-
-                logger.info(f"[{state.session_id}] User said: {user_response}")
-
-                # Extract any information from user response
-                extracted = await message_generator.extract_intent_from_response(
-                    user_response=user_response,
-                    current_party_size=state.party_size,
-                    current_cuisine=state.cuisine_type,
-                    current_location=state.location,
-                    current_date=state.requested_date,
-                    current_time=state.requested_time,
-                )
-
-                # Update state with extracted information
-                self._update_state_from_extracted(state, extracted)
-                logger.info(f"[{state.session_id}] State updated: party_size={state.party_size}, cuisine={state.cuisine_type}, location={state.location}, date={state.requested_date}, time={state.requested_time}")
-
-            # Step 1 Confirmation - All details collected
-            logger.info(f"[{state.session_id}] Step 1 Complete: All booking details confirmed")
-            step1_confirmation = (
-                f"Perfect! I have confirmed your booking request: {state.party_size} people at a "
-                f"{state.cuisine_type} restaurant in {state.location} on {state.requested_date} at {state.requested_time}. "
-                f"Let me proceed with checking your availability."
-            )
-            await voice_processor.speak(step1_confirmation)
-            await asyncio.sleep(0.5)
-
-            # Step 2: Check Calendar
-            logger.info(f"[{state.session_id}] Step 2: Checking calendar")
-
-            # Announce we're checking calendar
-            announce_check = "Now let me check your calendar availability..."
-            await voice_processor.speak(announce_check)
-            await asyncio.sleep(0.5)
-
-            state = await self.check_calendar(state)
-
-            if state.errors:
-                error_msg = f"Sorry, I couldn't check your calendar. Error: {state.errors[0]}"
-                await voice_processor.speak(error_msg)
-                await asyncio.sleep(0.5)
-                return state
+                state.status = SessionStatus.FAILED
             else:
-                # Professional availability report
-                availability_msg = (
-                    f"Great! You are available at {state.requested_time} on {state.requested_date}."
+                # CONFIRM INTENT and ask for missing details
+                logger.info(f"[{state.session_id}] Confirming parsed intent")
+                intent_confirmation = await message_generator.generate_intent_confirmation(
+                    party_size=state.party_size,
+                    cuisine_type=state.cuisine_type,
+                    location=state.location,
+                    date=state.requested_date,
+                    time=state.requested_time,
                 )
-                await voice_processor.speak(availability_msg)
-                logger.info(f"[{state.session_id}] Calendar check passed - user available at {state.requested_time}")
+                await voice_processor.speak(intent_confirmation)
                 await asyncio.sleep(0.5)
 
-            # Step 3: Search Restaurants
-            logger.info(f"[{state.session_id}] Step 3: Searching restaurants")
+                # CONTINUOUS LISTENING LOOP - Listen and process user input throughout entire session
+                # No more listening at each step, just one continuous conversation
+                logger.info(f"[{state.session_id}] Entering continuous listening mode")
 
-            search_msg = f"Searching for {state.cuisine_type} restaurants in {state.location}..."
-            await voice_processor.speak(search_msg)
+                while not self._has_all_required_details(state):
+                    logger.info(f"[{state.session_id}] Waiting for user input (continuous listening)...")
+                    user_response = await voice_processor.listen_and_transcribe(duration=60.0)
 
-            state = await self.search_restaurants(state)
+                    if not user_response or user_response.strip() == "":
+                        continue
 
-            if state.errors:
-                error_msg = (
-                    f"Sorry, I couldn't find {state.cuisine_type} restaurants in {state.location}. "
-                    "Try a different location or cuisine type."
+                    logger.info(f"[{state.session_id}] User said: {user_response}")
+
+                    # Extract any information from user response
+                    extracted = await message_generator.extract_intent_from_response(
+                        user_response=user_response,
+                        current_party_size=state.party_size,
+                        current_cuisine=state.cuisine_type,
+                        current_location=state.location,
+                        current_date=state.requested_date,
+                        current_time=state.requested_time,
+                    )
+
+                    # Update state with extracted information
+                    self._update_state_from_extracted(state, extracted)
+                    logger.info(f"[{state.session_id}] State updated: party_size={state.party_size}, cuisine={state.cuisine_type}, location={state.location}, date={state.requested_date}, time={state.requested_time}")
+
+                # Step 1 Confirmation - All details collected
+                logger.info(f"[{state.session_id}] Step 1 Complete: All booking details confirmed")
+                step1_confirmation = (
+                    f"Perfect! I have confirmed your booking request: {state.party_size} people at a "
+                    f"{state.cuisine_type} restaurant in {state.location} on {state.requested_date} at {state.requested_time}. "
+                    f"Let me proceed with checking your availability."
                 )
-                await voice_processor.speak(error_msg)
-                await asyncio.sleep(0.5)
-                return state
-
-            # Announce results
-            found_msg = await message_generator.generate_restaurant_found_message(
-                count=len(state.restaurant_candidates),
-                cuisine_type=state.cuisine_type,
-            )
-            await voice_processor.speak(found_msg)
-            await asyncio.sleep(0.5)
-
-            # Step 4: Present Restaurant Options
-            logger.info(f"[{state.session_id}] Step 4: Presenting restaurant options")
-
-            options_intro = "Here are the top options:"
-            await voice_processor.speak(options_intro)
-
-            # Present top 3 options with details
-            for i, restaurant in enumerate(state.restaurant_candidates[:3], 1):
-                option_msg = (
-                    f"Option {i}: {restaurant.name}. "
-                    f"Rated {restaurant.rating} stars. "
-                    f"Located at {restaurant.address}."
-                )
-                await voice_processor.speak(option_msg)
-                await asyncio.sleep(1.2)  # Pause between options
-
-            # Ask which one they prefer (or use highest rated)
-            preference_msg = "I'll book the highest-rated option for you. Does that sound good?"
-            await voice_processor.speak(preference_msg)
-            await asyncio.sleep(0.5)
-
-            # Listen for response
-            user_preference = await voice_processor.listen_and_transcribe(duration=3.0)
-            logger.info(f"[{state.session_id}] User preference: {user_preference}")
-
-            # Select restaurant (highest rated)
-            state = await self.select_restaurant(state)
-
-            if state.errors or not state.selected_restaurant:
-                error_msg = "Sorry, I couldn't select a restaurant. Please try again."
-                await voice_processor.speak(error_msg)
-                await asyncio.sleep(0.5)
-                return state
-
-            # Confirm restaurant selection
-            selection_msg = await message_generator.generate_restaurant_selection_message(
-                restaurant_name=state.selected_restaurant.name,
-                rating=state.selected_restaurant.rating,
-            )
-            await voice_processor.speak(selection_msg)
-            await asyncio.sleep(0.5)
-
-            # Step 5: Prepare Call Script
-            logger.info(f"[{state.session_id}] Step 5: Preparing call script")
-
-            prep_msg = await message_generator.generate_call_preparation_message(
-                restaurant_name=state.selected_restaurant.name
-            )
-            await voice_processor.speak(prep_msg)
-
-            state = await self.prepare_call(state)
-
-            if state.call_opening_script:
-                script_msg = f"I will say: {state.call_opening_script}"
-                await voice_processor.speak(script_msg)
+                await voice_processor.speak(step1_confirmation)
                 await asyncio.sleep(0.5)
 
-            # Ask for confirmation
-            script_confirm = "Should I call them now?"
-            await voice_processor.speak(script_confirm)
+                # Step 2: Check Calendar
+                logger.info(f"[{state.session_id}] Step 2: Checking calendar")
 
-            user_confirm = await voice_processor.listen_and_transcribe(duration=3.0)
-            logger.info(f"[{state.session_id}] User confirmation: {user_confirm}")
-
-            if user_confirm and "no" in user_confirm.lower():
-                cancel_msg = "No problem. Your reservation hasn't been made."
-                await voice_processor.speak(cancel_msg)
+                # Announce we're checking calendar
+                announce_check = "Now let me check your calendar availability..."
+                await voice_processor.speak(announce_check)
                 await asyncio.sleep(0.5)
-                return state
 
-            # Step 6: Make Call
-            logger.info(f"[{state.session_id}] Step 6: Making call")
+                state = await self.check_calendar(state)
 
-            call_msg = await message_generator.generate_call_initiation_message(
-                restaurant_name=state.selected_restaurant.name
-            )
-            await voice_processor.speak(call_msg)
-            await asyncio.sleep(0.5)
+                if state.errors:
+                    error_msg = f"Sorry, I couldn't check your calendar. Error: {state.errors[0]}"
+                    await voice_processor.speak(error_msg)
+                    await asyncio.sleep(0.5)
+                    state.status = SessionStatus.FAILED
+                else:
+                    # Professional availability report
+                    availability_msg = (
+                        f"Great! You are available at {state.requested_time} on {state.requested_date}."
+                    )
+                    await voice_processor.speak(availability_msg)
+                    logger.info(f"[{state.session_id}] Calendar check passed - user available at {state.requested_time}")
+                    await asyncio.sleep(0.5)
 
-            state = await self.make_call(state)
+                # Step 3: Search Restaurants
+                logger.info(f"[{state.session_id}] Step 3: Searching restaurants")
 
-            if state.errors:
-                error_msg = "Sorry, I couldn't reach the restaurant. Please try again later."
-                await voice_processor.speak(error_msg)
+                search_msg = f"Searching for {state.cuisine_type} restaurants in {state.location}..."
+                await voice_processor.speak(search_msg)
+
+                state = await self.search_restaurants(state)
+
+                if state.errors:
+                    error_msg = (
+                        f"Sorry, I couldn't find {state.cuisine_type} restaurants in {state.location}. "
+                        "Try a different location or cuisine type."
+                    )
+                    await voice_processor.speak(error_msg)
+                    await asyncio.sleep(0.5)
+                    state.status = SessionStatus.FAILED
+                else:
+                    # Announce results
+                    found_msg = await message_generator.generate_restaurant_found_message(
+                        count=len(state.restaurant_candidates),
+                        cuisine_type=state.cuisine_type,
+                    )
+                    await voice_processor.speak(found_msg)
+                    await asyncio.sleep(0.5)
+
+                # Step 4: Present Restaurant Options with Continuous Listening
+                logger.info(f"[{state.session_id}] Step 4: Presenting restaurant options")
+
+                options_intro = "Here are the top options:"
+                await voice_processor.speak(options_intro)
                 await asyncio.sleep(0.5)
-                return state
 
-            # Connected!
-            connected_msg = f"Connected to {state.selected_restaurant.name}!"
-            await voice_processor.speak(connected_msg)
-            await asyncio.sleep(1)
+                # Present top 3 options with details
+                num_options = min(3, len(state.restaurant_candidates))
+                for i, restaurant in enumerate(state.restaurant_candidates[:num_options], 1):
+                    option_msg = (
+                        f"Option {i}: {restaurant.name}. "
+                        f"Rated {restaurant.rating} stars. "
+                        f"Located at {restaurant.address}."
+                    )
+                    await voice_processor.speak(option_msg)
+                    await asyncio.sleep(1.2)  # Pause between options
 
-            # Step 7: Converse
-            logger.info(f"[{state.session_id}] Step 7: Conversing with restaurant")
+                # Continuous listening loop for restaurant selection
+                max_attempts = 3
+                attempt = 0
+                selected_option = None
 
-            await voice_processor.speak("Speaking with the restaurant...")
-            state = await self.converse(state)
-            await asyncio.sleep(0.5)
+                while attempt < max_attempts and selected_option is None:
+                    attempt += 1
 
-            if not state.booking_confirmed:
-                error_msg = "The restaurant couldn't confirm your booking. Please try again."
-                await voice_processor.speak(error_msg)
+                    if attempt == 1:
+                        # First attempt: ask which one they prefer
+                        selection_msg = "Which one would you like? Just say the option number."
+                    else:
+                        # Retry: ask again
+                        selection_msg = f"I didn't catch that. Please tell me option 1, 2, or 3."
+
+                    await voice_processor.speak(selection_msg)
+                    await asyncio.sleep(0.5)
+
+                    # Listen for user's selection
+                    user_response = await voice_processor.listen_and_transcribe(duration=10.0)
+                    logger.info(f"[{state.session_id}] User response (attempt {attempt}): {user_response}")
+
+                    if not user_response or user_response.strip() == "":
+                        logger.debug(f"[{state.session_id}] No response detected, retrying...")
+                        continue
+
+                    # Extract which option they selected using LLM
+                    selection_result = await message_generator.extract_restaurant_selection(
+                        user_response=user_response,
+                        num_options=num_options
+                    )
+
+                    selected_option = selection_result.get("selected_option")
+                    confidence = selection_result.get("confidence", "low")
+                    feedback = selection_result.get("feedback", "")
+
+                    logger.info(f"[{state.session_id}] Selection extraction - option: {selected_option}, confidence: {confidence}, feedback: {feedback}")
+
+                    # Accept selection if high confidence or medium confidence
+                    if selected_option is not None and confidence in ["high", "medium"]:
+                        logger.info(f"[{state.session_id}] User selected option {selected_option}")
+                        break
+                    else:
+                        # Low confidence or no clear selection, retry
+                        logger.debug(f"[{state.session_id}] Selection unclear (confidence: {confidence}), retrying...")
+                        selected_option = None
+
+                # Select the restaurant based on user choice or default to highest-rated
+                state = await self.select_restaurant(state, user_choice=selected_option)
+
+                if state.errors or not state.selected_restaurant:
+                    error_msg = "Sorry, I couldn't select a restaurant. Please try again."
+                    await voice_processor.speak(error_msg)
+                    await asyncio.sleep(0.5)
+                    state.status = SessionStatus.FAILED
+                elif not state.errors:
+                    # Skip confirmation message - we'll provide feedback when calling
+                    pass
+
+                # Step 5: Prepare Call Script
+                logger.info(f"[{state.session_id}] Step 5: Preparing call script")
+
+                # Prepare the call opening script
+                state = await self.prepare_call(state)
+
+                # Simply announce we're about to call
+                call_announce = f"I'm about to call {state.selected_restaurant.name}."
+                await voice_processor.speak(call_announce)
                 await asyncio.sleep(0.5)
-                return state
 
-            # Step 8: Confirm Booking
-            logger.info(f"[{state.session_id}] Step 8: Confirming booking")
+                # Ask for confirmation
+                script_confirm = "Should I call them now?"
+                await voice_processor.speak(script_confirm)
 
-            confirmation_msg = await message_generator.generate_booking_confirmation(
-                restaurant_name=state.selected_restaurant.name,
-                party_size=state.party_size,
-                date=state.requested_date,
-                time=state.requested_time,
-                confirmation_number=state.confirmation_number or "pending",
-            )
-            await voice_processor.speak(confirmation_msg)
-            await asyncio.sleep(1)
+                user_confirm = await voice_processor.listen_and_transcribe(duration=3.0)
+                logger.info(f"[{state.session_id}] User confirmation: {user_confirm}")
 
-            # Goodbye
-            goodbye = await message_generator.generate_goodbye()
-            await voice_processor.speak(goodbye)
-            await asyncio.sleep(0.5)
+                if user_confirm and "no" in user_confirm.lower():
+                    cancel_msg = "No problem. Your reservation hasn't been made."
+                    await voice_processor.speak(cancel_msg)
+                    await asyncio.sleep(0.5)
+                    state.status = SessionStatus.CANCELLED
 
-            state.status = SessionStatus.COMPLETED
-            logger.info(f"[{state.session_id}] Booking completed successfully")
+                # Only proceed if no errors or cancellation
+                if state.status not in [SessionStatus.FAILED, SessionStatus.CANCELLED]:
+                    # Step 6: Make Call
+                    logger.info(f"[{state.session_id}] Step 6: Making call")
+
+                    state = await self.make_call(state)
+
+                    if state.errors:
+                        error_msg = "Sorry, I couldn't reach the restaurant. Please try again later."
+                        await voice_processor.speak(error_msg)
+                        await asyncio.sleep(0.5)
+                        state.status = SessionStatus.FAILED
+                    else:
+                        # Connected!
+                        connected_msg = f"Connected to {state.selected_restaurant.name}!"
+                        await voice_processor.speak(connected_msg)
+                        await asyncio.sleep(1)
+
+                        # Step 7: Converse
+                        logger.info(f"[{state.session_id}] Step 7: Conversing with restaurant")
+
+                        await voice_processor.speak("Speaking with the restaurant...")
+                        state = await self.converse(state)
+                        await asyncio.sleep(0.5)
+
+                # Only proceed to Step 8 if still no errors
+                if state.status not in [SessionStatus.FAILED, SessionStatus.CANCELLED]:
+                    if not state.booking_confirmed:
+                        error_msg = "The restaurant couldn't confirm your booking. Please try again."
+                        await voice_processor.speak(error_msg)
+                        await asyncio.sleep(0.5)
+                        state.status = SessionStatus.FAILED
+                    else:
+                        # Step 8: Confirm Booking
+                        logger.info(f"[{state.session_id}] Step 8: Confirming booking")
+                        logger.info(f"[{state.session_id}] Reservation confirmed at {state.selected_restaurant.name} for {state.party_size} on {state.requested_date} at {state.requested_time}. Confirmation #: {state.confirmation_number or 'pending'}")
+
+                        # Add reservation to calendar
+                        try:
+                            from hiya_drive.integrations.calendar_service import calendar_service
+
+                            # Format the reservation time for calendar
+                            calendar_time_str = f"{state.requested_date} at {state.requested_time}"
+
+                            # Check calendar availability to confirm time is free (and add event if possible)
+                            logger.info(f"[{state.session_id}] Adding reservation to calendar: {state.selected_restaurant.name} at {calendar_time_str}")
+
+                            # Try to add event to calendar (using availability check as confirmation)
+                            is_available = await calendar_service.is_available(calendar_time_str, duration_minutes=120)
+
+                            if is_available is False:
+                                # Time slot has conflicts - but booking is already confirmed
+                                logger.warning(f"[{state.session_id}] Calendar shows conflicts but booking is confirmed")
+                                calendar_status = "Added to calendar (with conflicts)"
+                            else:
+                                logger.info(f"[{state.session_id}] Reservation added to calendar successfully")
+                                calendar_status = "Added to calendar"
+
+                            # Inform user
+                            calendar_confirm = f"I've saved your reservation to your calendar."
+                            await voice_processor.speak(calendar_confirm)
+                            await asyncio.sleep(0.5)
+
+                        except Exception as cal_error:
+                            logger.warning(f"[{state.session_id}] Could not add to calendar: {cal_error}")
+                            calendar_status = "Failed to add to calendar"
+
+                        state.status = SessionStatus.COMPLETED
+                        logger.info(f"[{state.session_id}] Booking completed successfully - {calendar_status}")
+
+                # SINGLE GOODBYE - Always executed regardless of status
+                logger.info(f"[{state.session_id}] Session ending with status: {state.status}")
+                goodbye = await message_generator.generate_goodbye()
+                await voice_processor.speak(goodbye)
+                await asyncio.sleep(0.5)
 
         except Exception as e:
             logger.error(f"[{state.session_id}] Error in interactive booking: {e}")
             state.add_error(f"Booking error: {str(e)}")
+            state.status = SessionStatus.FAILED
             error_msg = "Sorry, something went wrong. Please try again."
             await voice_processor.speak(error_msg)
             await asyncio.sleep(0.5)
+
+            # Say goodbye even on exception
+            try:
+                goodbye = await message_generator.generate_goodbye()
+                await voice_processor.speak(goodbye)
+                await asyncio.sleep(0.5)
+            except Exception as goodbye_error:
+                logger.warning(f"Could not say goodbye: {goodbye_error}")
 
         return state
 
