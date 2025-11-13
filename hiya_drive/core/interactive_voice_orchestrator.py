@@ -9,6 +9,7 @@ import random
 from typing import Optional
 
 from hiya_drive.core.orchestrator import BookingOrchestrator, DrivingBookingState
+from hiya_drive.models.state import SessionStatus
 from hiya_drive.voice.voice_processor import voice_processor
 from hiya_drive.voice.llm_message_generator import message_generator
 from hiya_drive.integrations.places_service import places_service
@@ -29,6 +30,8 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
         Run booking with interactive voice feedback at every step.
         User is asked for confirmation at each decision point.
         """
+        from datetime import datetime
+
         logger.info(f"[{driver_id}] Starting interactive voice booking")
 
         # Welcome
@@ -36,8 +39,13 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
         await voice_processor.speak(greeting)
         await asyncio.sleep(1)
 
-        # Create initial state
-        state = DrivingBookingState(session_id=driver_id, initial_utterance=initial_utterance)
+        # Create initial state with required fields
+        state = DrivingBookingState(
+            session_id=driver_id,
+            driver_id=driver_id,
+            start_time=datetime.now(),
+            last_utterance=initial_utterance
+        )
 
         try:
             # Step 1: Parse Intent
@@ -238,7 +246,7 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
             await voice_processor.speak(goodbye)
             await asyncio.sleep(0.5)
 
-            state.status = "completed"
+            state.status = SessionStatus.COMPLETED
             logger.info(f"[{state.session_id}] Booking completed successfully")
 
         except Exception as e:

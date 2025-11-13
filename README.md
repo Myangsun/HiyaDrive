@@ -29,14 +29,19 @@ HiyaDrive/
 │   │   └── settings.py                  # Configuration with environment variables
 │   │
 │   ├── core/
-│   │   └── orchestrator.py              # LangGraph workflow (9-node state machine)
+│   │   ├── orchestrator.py              # Base orchestrator (9-node LangGraph)
+│   │   ├── interactive_voice_orchestrator.py # ✨ NEW: Interactive with user feedback
+│   │   ├── voice_integrated_orchestrator.py  # Voice at every node
+│   │   ├── advanced_interactive_orchestrator.py
+│   │   └── interactive_orchestrator.py
 │   │
 │   ├── models/
 │   │   └── state.py                     # State definitions & data models
 │   │
 │   ├── voice/
-│   │   ├── audio_io.py                  # Mac microphone/speaker I/O
+│   │   ├── audio_io.py                  # Mac microphone/speaker I/O (PCM int16)
 │   │   ├── voice_processor.py           # STT/TTS (ElevenLabs)
+│   │   ├── llm_message_generator.py     # ✨ NEW: Dynamic message generation with Claude
 │   │   └── wake_word_detector.py        # Wake word detection
 │   │
 │   ├── integrations/
@@ -165,7 +170,7 @@ make status            # Show system configuration
 ```env
 # Voice APIs (ElevenLabs)
 ELEVENLABS_API_KEY=your_api_key
-ELEVENLABS_VOICE_ID=sarah
+ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL  # Sarah voice (actual UUID, not string "sarah")
 
 # Google APIs
 GOOGLE_CALENDAR_CREDENTIALS_PATH=/path/to/credentials.json
@@ -196,33 +201,57 @@ DEMO_MODE=False
 
 ---
 
-## 🔄 How It Works
+## 🔄 How It Works (Interactive Flow)
 
 ```
 User says "hiya" (wake word)
          ↓
-System greets: "Hi! I'm HiyaDrive. How can I help you?"
+🎤 System generates greeting (Claude LLM) and speaks it (ElevenLabs TTS)
          ↓
 User says: "Book a table for 2 at Italian next Friday at 7 PM"
          ↓
-ElevenLabs STT transcribes audio
+ElevenLabs STT transcribes audio (PCM int16 format)
          ↓
 Claude LLM parses intent (party size, cuisine, date, time)
          ↓
+🎤 System generates confirmation message and speaks it
+         ↓
+User responds: "Yes" or "No"
+         ↓
+[If Yes, continue; If No, start over]
+         ↓
 Google Calendar checks if driver is available
          ↓
-Google Places searches for Italian restaurants in area
+🎤 System generates availability message
          ↓
-System selects best restaurant
+Google Places searches for Italian restaurants
+         ↓
+🎤 System announces found restaurants and lists options
+         ↓
+[System presents top 3 options with ratings and addresses]
+         ↓
+System selects highest-rated restaurant
+         ↓
+🎤 System generates call script and asks for approval
+         ↓
+User approves (or declines)
          ↓
 Twilio makes phone call to restaurant
          ↓
-Simulates conversation & extracts confirmation #
+🎤 System confirms connection and simulates conversation
          ↓
-ElevenLabs TTS speaks confirmation
+Claude LLM extracts confirmation number
          ↓
-"Your reservation at Olive Garden for 2 on Friday at 7 PM is confirmed!"
+🎤 System generates final booking confirmation
+         ↓
+ElevenLabs TTS speaks confirmation with all details
+         ↓
+🎤 System generates goodbye message
+         ↓
+"Your reservation at [Restaurant] for 2 on Friday at 7 PM is confirmed!"
 ```
+
+**Key Innovation**: Every message is generated dynamically by Claude LLM - zero hardcoded strings!
 
 ---
 
@@ -337,19 +366,35 @@ make clean-logs # Remove logs and recordings
 
 ## 🔄 Workflow Architecture
 
-HiyaDrive uses a **9-node LangGraph state machine** for orchestration:
+### Four Orchestrator Levels
 
-1. **parse_intent** - Extract booking parameters from user speech
-2. **check_calendar** - Verify driver availability
-3. **search_restaurants** - Find matching restaurants
-4. **select_restaurant** - Choose best option
-5. **prepare_call** - Generate opening script (Claude)
-6. **make_call** - Initiate phone call (Twilio)
-7. **converse** - Handle multi-turn conversation
-8. **confirm_booking** - Save confirmation details
-9. **handle_error** - Error recovery and fallback
+HiyaDrive supports multiple orchestrators for different use cases:
 
-Each node can access real APIs and gracefully fallback if needed.
+| Orchestrator | Features | Best For |
+|---|---|---|
+| **Base** | Core 9-node workflow, no voice | Testing, backend |
+| **Interactive** | Voice confirmations at key steps | Quick demos |
+| **Advanced** | 10-step detailed announcements | Presentations |
+| **Interactive Voice** ⭐ | **User feedback at every step**, LLM-generated messages | **Production (Recommended)** |
+
+### Interactive Voice Orchestrator (RECOMMENDED)
+
+The primary orchestrator with **true conversational flow**:
+
+1. **Welcome Agent** 🎤 - LLM-generated greeting
+2. **Intent Parser Agent** 🎤 - Confirms parsed details, listens for user "yes/no"
+3. **Calendar Checker Agent** 🎤 - Announces availability
+4. **Restaurant Searcher Agent** 🎤 - Announces search results
+5. **Restaurant Selector Agent** 🎤 - Presents top 3 options, asks for preference
+6. **Call Scripter Agent** 🎤 - Generates and confirms script
+7. **Call Initiator Agent** 🎤 - Announces call (only if approved)
+8. **Conversationalist Agent** 🎤 - Simulates conversation with restaurant
+9. **Booking Finalizer Agent** 🎤 - Confirms booking with full details
+10. **Goodbye Agent** 🎤 - LLM-generated farewell
+
+**Every message is generated dynamically by Claude LLM - no hardcoded strings!**
+
+Each node asks for user feedback and can adapt the flow based on responses.
 
 ---
 
