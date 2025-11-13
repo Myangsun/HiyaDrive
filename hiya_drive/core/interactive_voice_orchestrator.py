@@ -27,17 +27,13 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
         self, driver_id: str, initial_utterance: str
     ) -> DrivingBookingState:
         """
-        Run booking with interactive voice feedback at every step.
-        User is asked for confirmation at each decision point.
+        Run booking with truly continuous listening throughout entire session.
+        Agent greets once, then listens continuously for user input.
+        User can provide information or corrections at any time.
         """
         from datetime import datetime
 
         logger.info(f"[{driver_id}] Starting interactive voice booking")
-
-        # Welcome
-        greeting = await message_generator.generate_greeting()
-        await voice_processor.speak(greeting)
-        await asyncio.sleep(1)
 
         # Create initial state with required fields
         state = DrivingBookingState(
@@ -48,17 +44,17 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
         )
 
         try:
-            # Step 1: Parse Intent
-            logger.info(f"[{state.session_id}] Step 1: Parsing intent")
+            # PARSE INITIAL INTENT from user's first message
+            logger.info(f"[{state.session_id}] Parsing initial intent from: {initial_utterance}")
             state = await self.parse_intent(state)
 
             if state.errors:
-                error_msg = f"Sorry, I couldn't understand. {state.errors[0]}"
+                error_msg = f"Sorry, I couldn't understand that. {state.errors[0]}"
                 await voice_processor.speak(error_msg)
-                await asyncio.sleep(0.5)
                 return state
 
-            # Confirm intent with user
+            # CONFIRM INTENT and ask for missing details
+            logger.info(f"[{state.session_id}] Confirming parsed intent")
             intent_confirmation = await message_generator.generate_intent_confirmation(
                 party_size=state.party_size,
                 cuisine_type=state.cuisine_type,
@@ -69,19 +65,32 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
             await voice_processor.speak(intent_confirmation)
             await asyncio.sleep(0.5)
 
-            # Ask for user confirmation
-            confirmation_request = "Please say yes or no."
-            await voice_processor.speak(confirmation_request)
+            # CONTINUOUS LISTENING LOOP - Listen and process user input throughout entire session
+            # No more listening at each step, just one continuous conversation
+            logger.info(f"[{state.session_id}] Entering continuous listening mode")
 
-            # Listen for user response
-            user_response = await voice_processor.listen_and_transcribe(duration=3.0)
-            logger.info(f"[{state.session_id}] User response: {user_response}")
+            while not self._has_all_required_details(state):
+                logger.info(f"[{state.session_id}] Waiting for user input (continuous listening)...")
+                user_response = await voice_processor.listen_and_transcribe(duration=60.0)
 
-            if user_response and "no" in user_response.lower():
-                no_msg = "No problem. Let's start over. Tell me what you'd like to book."
-                await voice_processor.speak(no_msg)
-                await asyncio.sleep(0.5)
-                return state
+                if not user_response or user_response.strip() == "":
+                    continue
+
+                logger.info(f"[{state.session_id}] User said: {user_response}")
+
+                # Extract any information from user response
+                extracted = await message_generator.extract_intent_from_response(
+                    user_response=user_response,
+                    current_party_size=state.party_size,
+                    current_cuisine=state.cuisine_type,
+                    current_location=state.location,
+                    current_date=state.requested_date,
+                    current_time=state.requested_time,
+                )
+
+                # Update state with extracted information
+                self._update_state_from_extracted(state, extracted)
+                logger.info(f"[{state.session_id}] State updated: party_size={state.party_size}, cuisine={state.cuisine_type}, location={state.location}, date={state.requested_date}, time={state.requested_time}")
 
             # Step 2: Check Calendar
             logger.info(f"[{state.session_id}] Step 2: Checking calendar")
@@ -257,6 +266,29 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
             await asyncio.sleep(0.5)
 
         return state
+
+    def _has_all_required_details(self, state: DrivingBookingState) -> bool:
+        """Check if all required booking details are present."""
+        return all([
+            state.party_size,
+            state.cuisine_type,
+            state.location,
+            state.requested_date,
+            state.requested_time,
+        ])
+
+    def _update_state_from_extracted(self, state: DrivingBookingState, extracted: dict) -> None:
+        """Update state with extracted information from user response."""
+        if extracted.get("party_size"):
+            state.party_size = extracted["party_size"]
+        if extracted.get("cuisine_type"):
+            state.cuisine_type = extracted["cuisine_type"]
+        if extracted.get("location"):
+            state.location = extracted["location"]
+        if extracted.get("date"):
+            state.requested_date = extracted["date"]
+        if extracted.get("time"):
+            state.requested_time = extracted["time"]
 
 
 # Global orchestrator instance

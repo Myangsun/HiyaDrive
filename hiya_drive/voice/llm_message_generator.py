@@ -354,6 +354,118 @@ class LLMMessageGenerator:
             logger.error(f"Error generating confirmation request: {e}")
             return f"Does this {step_name} look good to you?"
 
+    async def extract_intent_from_response(
+        self,
+        user_response: str,
+        current_party_size: Optional[int] = None,
+        current_cuisine: Optional[str] = None,
+        current_location: Optional[str] = None,
+        current_date: Optional[str] = None,
+        current_time: Optional[str] = None,
+    ) -> dict:
+        """
+        Extract booking intent changes from free-form user response.
+        Uses Claude to understand natural corrections like "Actually I want 3 people" or "downtown is better".
+
+        Returns dict with keys: party_size, cuisine_type, location, date, time, is_confirmed (bool)
+        """
+        logger.info(f"Extracting intent from response: {user_response}")
+
+        try:
+            current_state = f"""
+Current booking state:
+- Party size: {current_party_size}
+- Cuisine: {current_cuisine}
+- Location: {current_location}
+- Date: {current_date}
+- Time: {current_time}
+"""
+
+            message = self.client.messages.create(
+                model=self.model,
+                max_tokens=300,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"""Analyze this user response and determine if they're confirming or changing their booking details.
+
+{current_state}
+
+User said: "{user_response}"
+
+Return JSON with:
+- is_confirmed: true if user approves (yes, sounds good, let's go, etc.), false if they want changes
+- party_size: number if mentioned or correction, else null
+- cuisine_type: cuisine if mentioned or correction, else null
+- location: location if mentioned or correction, else null
+- date: date if mentioned or correction, else null
+- time: time if mentioned or correction, else null
+- feedback: brief note about what changed (empty string if confirming)
+
+Be strict: only extract clear corrections. "2." alone doesn't change party size.""",
+                    }
+                ],
+            )
+
+            import json
+            result_text = message.content[0].text.strip()
+
+            # Try to parse JSON
+            try:
+                # Find JSON block in response
+                start_idx = result_text.find('{')
+                end_idx = result_text.rfind('}') + 1
+                if start_idx >= 0 and end_idx > start_idx:
+                    json_str = result_text[start_idx:end_idx]
+                    result = json.loads(json_str)
+                else:
+                    result = json.loads(result_text)
+            except json.JSONDecodeError:
+                # Fallback: assume confirmation if we can't parse
+                logger.warning(f"Could not parse response JSON: {result_text}")
+                result = {"is_confirmed": True, "feedback": "Could not parse response"}
+
+            logger.info(f"Extracted intent changes: {result}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error extracting intent from response: {e}")
+            return {"is_confirmed": True, "feedback": "Error parsing response, proceeding"}
+
+    async def generate_clarification_question(
+        self, missing_fields: list, current_details: dict
+    ) -> str:
+        """
+        Generate a natural clarification question for missing booking details.
+        E.g., if location is missing, ask "What area would you prefer?"
+        """
+        logger.info(f"Generating clarification for missing fields: {missing_fields}")
+
+        try:
+            fields_str = ", ".join(missing_fields)
+            message = self.client.messages.create(
+                model=self.model,
+                max_tokens=100,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Generate a brief, natural question to ask the user for missing booking details: {fields_str}. "
+                            f"Current details: {current_details}. "
+                            f"Be conversational and combine questions if possible. Do not use quotes."
+                        ),
+                    }
+                ],
+            )
+
+            question = message.content[0].text.strip()
+            logger.info(f"Generated clarification: {question}")
+            return question
+
+        except Exception as e:
+            logger.error(f"Error generating clarification: {e}")
+            return f"Can you please tell me the {', '.join(missing_fields)}?"
+
 
 # Global message generator instance
 message_generator = LLMMessageGenerator()

@@ -69,7 +69,7 @@ async def _run_demo(utterance: Optional[str], driver_id: str, interactive: bool)
     # Get user input
     if interactive:
         click.echo("🎤 Interactive Mode - Listening to microphone...")
-        click.echo(f"   Recording for {settings.voice_timeout} seconds...")
+        click.echo(f"   Max {settings.voice_timeout}s (stops early on silence)...")
         click.echo(
             "   Say: 'Book a table for X at [cuisine] on [date] at [time]'")
         click.echo()

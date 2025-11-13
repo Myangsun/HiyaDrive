@@ -117,25 +117,24 @@ class WakeWordDetector:
         detected = await self.listen_for_wake_word(timeout)
 
         if detected:
-            # Greet the user
+            # Greet immediately after wake word detection
             await self._greet_user()
 
         return detected
 
     async def _greet_user(self) -> None:
-        """Greet the user after wake word detection."""
-        greetings = [
-            "Hi! I'm HiyaDrive. How can I help you today?",
-            "Hey there! What can I do for you?",
-            "I'm here to help. What do you need?",
-        ]
+        """Greet the user after wake word detection using LLM-generated message."""
+        from hiya_drive.voice.llm_message_generator import message_generator
 
-        import random
-
-        greeting = random.choice(greetings)
-
-        logger.info(f"Greeting user: {greeting}")
-        await voice_processor.speak(greeting)
+        try:
+            # Use LLM to generate dynamic greeting
+            greeting = await message_generator.generate_greeting()
+            logger.info(f"Greeting user with LLM-generated message: {greeting}")
+            await voice_processor.speak(greeting)
+        except Exception as e:
+            logger.error(f"Error generating greeting: {e}")
+            # Fallback to simple greeting if LLM fails
+            await voice_processor.speak("Hi! I'm HiyaDrive. How can I help you today?")
 
 
 # Global wake word detector instance

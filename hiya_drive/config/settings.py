@@ -54,8 +54,9 @@ class Settings(BaseSettings):
     channels: int = Field(default=1, env="CHANNELS")
     audio_chunk_size: int = Field(default=4096, env="AUDIO_CHUNK_SIZE")
     audio_input_device: int = Field(default=-1, env="AUDIO_INPUT_DEVICE")  # -1 = default
-    voice_timeout: int = Field(default=30, env="VOICE_TIMEOUT")
+    voice_timeout: int = Field(default=10, env="VOICE_TIMEOUT")  # Reduced with early stop on silence
     silence_threshold: float = Field(default=-40.0, env="SILENCE_THRESHOLD")
+    silence_duration: float = Field(default=1.5, env="SILENCE_DURATION")  # Seconds of silence to stop recording
 
     # =========================================================================
     # Wake Word & Voice Detection

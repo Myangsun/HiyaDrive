@@ -25,11 +25,22 @@ class MacAudioIO:
         self.channels = settings.channels
         self.chunk_size = settings.audio_chunk_size
         self.silence_threshold = settings.silence_threshold
+        self.silence_duration = settings.silence_duration  # Seconds of silence to stop recording
 
         self.input_stream = None
         self.output_stream = None
         self.audio_queue = queue.Queue()
         self.is_listening = False
+
+    def _compute_audio_level(self, audio_data: np.ndarray) -> float:
+        """Compute RMS (Root Mean Square) audio level in dB."""
+        if len(audio_data) == 0:
+            return -np.inf
+        rms = np.sqrt(np.mean(audio_data.astype(float) ** 2))
+        if rms == 0:
+            return -np.inf
+        db = 20 * np.log10(rms / 32768.0)  # Normalize for int16 range
+        return db
 
     def list_devices(self) -> None:
         """List available audio devices."""
@@ -107,18 +118,21 @@ class MacAudioIO:
         self, duration: float, on_chunk: Optional[Callable] = None
     ) -> bytes:
         """
-        Record audio for specified duration.
+        Record audio for specified duration with voice activity detection (VAD).
         Uses PCM int16 format matching output for consistency.
+        Stops early if silence is detected for silence_duration seconds.
 
         Args:
-            duration: Recording duration in seconds
+            duration: Max recording duration in seconds
             on_chunk: Optional callback for each chunk
 
         Returns:
             Audio data as bytes (PCM int16 format)
         """
-        logger.info(f"Recording for {duration} seconds (PCM int16)...")
+        logger.info(f"Recording (max {duration}s, early stop on {self.silence_duration}s silence)...")
         frames = []
+        silence_frames = 0
+        silence_threshold_frames = int(self.sample_rate / self.chunk_size * self.silence_duration)
 
         try:
             stream_kwargs = {
@@ -137,13 +151,30 @@ class MacAudioIO:
             stream = self.pyaudio.open(**stream_kwargs)
 
             chunks_needed = int((self.sample_rate / self.chunk_size) * duration)
+            speech_detected = False
 
-            for _ in range(chunks_needed):
+            for i in range(chunks_needed):
                 data = stream.read(self.chunk_size, exception_on_overflow=False)
+                audio_array = np.frombuffer(data, dtype=np.int16)
                 frames.append(data)
 
+                # VAD: Detect audio level
+                audio_level = self._compute_audio_level(audio_array)
+
+                if audio_level > self.silence_threshold:
+                    # Audio detected, reset silence counter
+                    silence_frames = 0
+                    speech_detected = True
+                else:
+                    # Silence detected
+                    if speech_detected:
+                        silence_frames += 1
+                        # Stop if enough silence after speech
+                        if silence_frames >= silence_threshold_frames:
+                            logger.info(f"VAD: Silence detected, stopping early at {i}/{chunks_needed} chunks")
+                            break
+
                 if on_chunk:
-                    audio_array = np.frombuffer(data, dtype=np.int16)  # int16 format
                     on_chunk(audio_array)
 
             stream.stop_stream()
