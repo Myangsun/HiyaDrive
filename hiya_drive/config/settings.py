@@ -33,9 +33,7 @@ class Settings(BaseSettings):
     google_calendar_credentials_path: Optional[str] = Field(
         default=None, env="GOOGLE_CALENDAR_CREDENTIALS_PATH"
     )
-    google_calendar_id: str = Field(
-        default="primary", env="GOOGLE_CALENDAR_ID"
-    )
+    google_calendar_id: str = Field(default="primary", env="GOOGLE_CALENDAR_ID")
     google_places_api_key: str = Field(default="", env="GOOGLE_PLACES_API_KEY")
 
     twilio_account_sid: str = Field(default="", env="TWILIO_ACCOUNT_SID")
@@ -56,10 +54,16 @@ class Settings(BaseSettings):
     sample_rate: int = Field(default=16000, env="SAMPLE_RATE")
     channels: int = Field(default=1, env="CHANNELS")
     audio_chunk_size: int = Field(default=4096, env="AUDIO_CHUNK_SIZE")
-    audio_input_device: int = Field(default=-1, env="AUDIO_INPUT_DEVICE")  # -1 = default
-    voice_timeout: int = Field(default=10, env="VOICE_TIMEOUT")  # Reduced with early stop on silence
+    audio_input_device: int = Field(
+        default=-1, env="AUDIO_INPUT_DEVICE"
+    )  # -1 = default
+    voice_timeout: int = Field(
+        default=10, env="VOICE_TIMEOUT"
+    )  # Reduced with early stop on silence
     silence_threshold: float = Field(default=-40.0, env="SILENCE_THRESHOLD")
-    silence_duration: float = Field(default=1.5, env="SILENCE_DURATION")  # Seconds of silence to stop recording
+    silence_duration: float = Field(
+        default=1.5, env="SILENCE_DURATION"
+    )  # Seconds of silence to stop recording
 
     # =========================================================================
     # Wake Word & Voice Detection

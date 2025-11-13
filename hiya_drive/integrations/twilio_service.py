@@ -90,9 +90,12 @@ class TwilioService:
             logger.error(f"Error making Twilio call: {e}")
             # Fallback: Simulate successful call for demo purposes
             if "not a valid phone number" in str(e).lower():
-                logger.info("📞 FALLBACK MODE: Simulating successful call (Twilio phone number invalid)")
+                logger.info(
+                    "📞 FALLBACK MODE: Simulating successful call (Twilio phone number invalid)"
+                )
                 logger.info(f"[DEMO] Speaking to restaurant: {opening_script}")
                 import uuid
+
                 simulated_sid = f"simulated_{uuid.uuid4().hex[:8]}"
                 logger.info(f"[DEMO] Call completed with SID: {simulated_sid}")
                 return simulated_sid

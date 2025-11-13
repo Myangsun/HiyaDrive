@@ -201,7 +201,9 @@ class LLMMessageGenerator:
 
         except Exception as e:
             logger.error(f"Error generating restaurant selection message: {e}")
-            return f"I'm going to book {restaurant_name} for you (rated {rating} stars)."
+            return (
+                f"I'm going to book {restaurant_name} for you (rated {rating} stars)."
+            )
 
     async def generate_call_preparation_message(self, restaurant_name: str) -> str:
         """Generate message when preparing to call restaurant."""
@@ -388,13 +390,14 @@ Be strict: only extract clear corrections. "2." alone doesn't change party size.
             )
 
             import json
+
             result_text = message.content[0].text.strip()
 
             # Try to parse JSON
             try:
                 # Find JSON block in response
-                start_idx = result_text.find('{')
-                end_idx = result_text.rfind('}') + 1
+                start_idx = result_text.find("{")
+                end_idx = result_text.rfind("}") + 1
                 if start_idx >= 0 and end_idx > start_idx:
                     json_str = result_text[start_idx:end_idx]
                     result = json.loads(json_str)
@@ -410,7 +413,10 @@ Be strict: only extract clear corrections. "2." alone doesn't change party size.
 
         except Exception as e:
             logger.error(f"Error extracting intent from response: {e}")
-            return {"is_confirmed": True, "feedback": "Error parsing response, proceeding"}
+            return {
+                "is_confirmed": True,
+                "feedback": "Error parsing response, proceeding",
+            }
 
     async def generate_clarification_question(
         self, missing_fields: list, current_details: dict
@@ -490,23 +496,26 @@ Be strict: "yeah" alone doesn't count as a selection. Look for explicit option n
             )
 
             import json
+
             result_text = message.content[0].text.strip()
 
             # Try to parse JSON
             try:
-                start_idx = result_text.find('{')
-                end_idx = result_text.rfind('}') + 1
+                start_idx = result_text.find("{")
+                end_idx = result_text.rfind("}") + 1
                 if start_idx >= 0 and end_idx > start_idx:
                     json_str = result_text[start_idx:end_idx]
                     result = json.loads(json_str)
                 else:
                     result = json.loads(result_text)
             except json.JSONDecodeError:
-                logger.warning(f"Could not parse restaurant selection JSON: {result_text}")
+                logger.warning(
+                    f"Could not parse restaurant selection JSON: {result_text}"
+                )
                 result = {
                     "selected_option": None,
                     "confidence": "low",
-                    "feedback": "Could not parse response"
+                    "feedback": "Could not parse response",
                 }
 
             logger.info(f"Extracted restaurant selection: {result}")
@@ -517,7 +526,7 @@ Be strict: "yeah" alone doesn't count as a selection. Look for explicit option n
             return {
                 "selected_option": None,
                 "confidence": "low",
-                "feedback": f"Error parsing response: {str(e)}"
+                "feedback": f"Error parsing response: {str(e)}",
             }
 
 

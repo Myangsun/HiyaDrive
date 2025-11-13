@@ -67,7 +67,9 @@ class PlacesService:
             }
 
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                async with session.get(
+                    url, params=params, timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
                     if response.status != 200:
                         raise Exception(
                             f"Google Places API HTTP error: {response.status}"
@@ -76,8 +78,7 @@ class PlacesService:
                     data = await response.json()
 
                     if data.get("status") != "OK":
-                        error_msg = data.get(
-                            "error_message", data.get("status"))
+                        error_msg = data.get("error_message", data.get("status"))
                         raise Exception(
                             f"Google Places API error: {error_msg}\n"
                             "Make sure the Places API is enabled in Google Cloud Console: "
@@ -111,8 +112,7 @@ class PlacesService:
 
                             restaurants.append(restaurant)
                         except Exception as e:
-                            logger.warning(
-                                f"Error parsing restaurant result: {e}")
+                            logger.warning(f"Error parsing restaurant result: {e}")
                             continue
 
                     if not restaurants:
@@ -124,9 +124,7 @@ class PlacesService:
                     return restaurants
 
         except ImportError:
-            raise Exception(
-                "aiohttp not installed. Install with: pip install aiohttp"
-            )
+            raise Exception("aiohttp not installed. Install with: pip install aiohttp")
 
     async def _get_phone_from_place_details(self, place_id: str) -> str:
         """
@@ -149,11 +147,15 @@ class PlacesService:
             }
 
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=5)) as response:
+                async with session.get(
+                    url, params=params, timeout=aiohttp.ClientTimeout(total=5)
+                ) as response:
                     if response.status == 200:
                         data = await response.json()
                         if data.get("status") == "OK":
-                            return data.get("result", {}).get("formatted_phone_number", "")
+                            return data.get("result", {}).get(
+                                "formatted_phone_number", ""
+                            )
                     return ""
 
         except Exception as e:

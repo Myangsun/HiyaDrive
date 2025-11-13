@@ -90,7 +90,7 @@ class CalendarService:
                 "PREFER_DATES_FROM": "current_period",
                 "RELATIVE_BASE": now_utc,
                 "RETURN_AS_TIMEZONE_AWARE": True,
-                "TIMEZONE": "UTC"
+                "TIMEZONE": "UTC",
             }
 
             # Try parsing the original string first
@@ -100,8 +100,12 @@ class CalendarService:
             if not parsed_datetime:
                 preprocessed = start_time.lower().replace("next ", "").strip()
                 if preprocessed != start_time.lower():
-                    logger.debug(f"Retrying parse with preprocessed string: {preprocessed}")
-                    parsed_datetime = dateparser.parse(preprocessed, settings=parse_settings)
+                    logger.debug(
+                        f"Retrying parse with preprocessed string: {preprocessed}"
+                    )
+                    parsed_datetime = dateparser.parse(
+                        preprocessed, settings=parse_settings
+                    )
 
             if not parsed_datetime:
                 logger.error(f"Could not parse time string: {start_time}")
@@ -115,7 +119,9 @@ class CalendarService:
             if "next" in start_time.lower():
                 while parsed_datetime <= now_utc:
                     parsed_datetime = parsed_datetime + timedelta(days=7)
-                    logger.debug(f"Advancing date by 7 days due to 'next' keyword: {parsed_datetime}")
+                    logger.debug(
+                        f"Advancing date by 7 days due to 'next' keyword: {parsed_datetime}"
+                    )
 
             # Convert to RFC 3339 format for API call
             start_dt = parsed_datetime.isoformat()
@@ -124,23 +130,31 @@ class CalendarService:
             logger.debug(f"Querying calendar events from {start_dt} to {end_dt}")
 
             # Query calendar events for the specified time range
-            events_result = self.service.events().list(
-                calendarId=self.calendar_id,
-                timeMin=start_dt,
-                timeMax=end_dt,
-                singleEvents=True,
-                orderBy="startTime",
-                showDeleted=False
-            ).execute()
+            events_result = (
+                self.service.events()
+                .list(
+                    calendarId=self.calendar_id,
+                    timeMin=start_dt,
+                    timeMax=end_dt,
+                    singleEvents=True,
+                    orderBy="startTime",
+                    showDeleted=False,
+                )
+                .execute()
+            )
 
             events = events_result.get("items", [])
 
             if events:
                 # If there are any events, driver is not available
-                logger.info(f"Found {len(events)} conflicting event(s) during requested time")
+                logger.info(
+                    f"Found {len(events)} conflicting event(s) during requested time"
+                )
                 for event in events:
                     event_title = event.get("summary", "Untitled")
-                    event_start = event.get("start", {}).get("dateTime", event.get("start", {}).get("date"))
+                    event_start = event.get("start", {}).get(
+                        "dateTime", event.get("start", {}).get("date")
+                    )
                     logger.debug(f"  - {event_title} at {event_start}")
                 return False
             else:
@@ -181,7 +195,9 @@ class CalendarService:
             raise Exception(error_msg)
 
         try:
-            logger.info(f"Adding reservation to calendar: {restaurant_name} at {reservation_time}")
+            logger.info(
+                f"Adding reservation to calendar: {restaurant_name} at {reservation_time}"
+            )
 
             # Parse the reservation time
             now_utc = datetime.now(pytz.utc)
@@ -189,17 +205,21 @@ class CalendarService:
                 "PREFER_DATES_FROM": "current_period",
                 "RELATIVE_BASE": now_utc,
                 "RETURN_AS_TIMEZONE_AWARE": True,
-                "TIMEZONE": "UTC"
+                "TIMEZONE": "UTC",
             }
 
-            parsed_datetime = dateparser.parse(reservation_time, settings=parse_settings)
+            parsed_datetime = dateparser.parse(
+                reservation_time, settings=parse_settings
+            )
 
             # If that fails, try preprocessing
             if not parsed_datetime:
                 preprocessed = reservation_time.lower().replace("next ", "").strip()
                 if preprocessed != reservation_time.lower():
                     logger.debug(f"Retrying parse with preprocessed: {preprocessed}")
-                    parsed_datetime = dateparser.parse(preprocessed, settings=parse_settings)
+                    parsed_datetime = dateparser.parse(
+                        preprocessed, settings=parse_settings
+                    )
 
             if not parsed_datetime:
                 logger.error(f"Could not parse reservation time: {reservation_time}")
@@ -220,7 +240,12 @@ class CalendarService:
             # Create the calendar event
             event = {
                 "summary": f"Dinner at {restaurant_name}",
-                "description": f"Restaurant reservation for {party_size} people" + (f"\nConfirmation #: {confirmation_number}" if confirmation_number else ""),
+                "description": f"Restaurant reservation for {party_size} people"
+                + (
+                    f"\nConfirmation #: {confirmation_number}"
+                    if confirmation_number
+                    else ""
+                ),
                 "start": {
                     "dateTime": start_time.isoformat(),
                     "timeZone": "UTC",
@@ -233,10 +258,11 @@ class CalendarService:
             }
 
             # Insert the event into the calendar
-            created_event = self.service.events().insert(
-                calendarId=self.calendar_id,
-                body=event
-            ).execute()
+            created_event = (
+                self.service.events()
+                .insert(calendarId=self.calendar_id, body=event)
+                .execute()
+            )
 
             event_id = created_event.get("id")
             event_link = created_event.get("htmlLink")

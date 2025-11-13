@@ -204,7 +204,9 @@ class BookingOrchestrator:
         if settings.use_mock_calendar:
             # Only use mock if explicitly enabled
             state.driver_calendar_free = True
-            logger.info(f"[{state.session_id}] Calendar: Available (mocked via USE_MOCK_CALENDAR)")
+            logger.info(
+                f"[{state.session_id}] Calendar: Available (mocked via USE_MOCK_CALENDAR)"
+            )
         else:
             # Try to use Google Calendar API (real credentials required)
             try:
@@ -292,13 +294,19 @@ class BookingOrchestrator:
             return state
 
         # If user specified a choice, use it (1-indexed)
-        if user_choice is not None and 1 <= user_choice <= len(state.restaurant_candidates):
+        if user_choice is not None and 1 <= user_choice <= len(
+            state.restaurant_candidates
+        ):
             state.selected_restaurant = state.restaurant_candidates[user_choice - 1]
-            logger.info(f"[{state.session_id}] User selected option {user_choice}: {state.selected_restaurant.name}")
+            logger.info(
+                f"[{state.session_id}] User selected option {user_choice}: {state.selected_restaurant.name}"
+            )
         else:
             # Default: auto-select highest-rated restaurant
             state.selected_restaurant = state.restaurant_candidates[0]
-            logger.info(f"[{state.session_id}] Auto-selected highest-rated: {state.selected_restaurant.name}")
+            logger.info(
+                f"[{state.session_id}] Auto-selected highest-rated: {state.selected_restaurant.name}"
+            )
 
         return state
 
@@ -413,9 +421,7 @@ Be natural and friendly. Format: [SCRIPT] your script here [END]"""
         state.add_message("assistant", f"{state.party_size} people please.")
         state.add_message("restaurant", "Sure! What name for the reservation?")
         state.add_message("assistant", "Alex")
-        state.add_message(
-            "restaurant", "Perfect! Your confirmation number is 4892."
-        )
+        state.add_message("restaurant", "Perfect! Your confirmation number is 4892.")
 
         state.confirmation_number = "4892"
         state.booking_confirmed = True

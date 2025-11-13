@@ -19,7 +19,9 @@ class WakeWordDetector:
         self.wake_word = settings.wake_word.lower()
         self.enabled = settings.enable_wake_word_detection
         self.similarity_threshold = 0.7  # 70% match required
-        logger.info(f"Wake word detector initialized: '{self.wake_word}' (threshold: {self.similarity_threshold})")
+        logger.info(
+            f"Wake word detector initialized: '{self.wake_word}' (threshold: {self.similarity_threshold})"
+        )
 
     def _detect_wake_word(self, transcript: str) -> bool:
         """
@@ -43,7 +45,7 @@ class WakeWordDetector:
 
         # Method 2: Extract single words and fuzzy match them
         # Remove punctuation and split into words
-        words = re.findall(r'\b\w+\b', text_lower)
+        words = re.findall(r"\b\w+\b", text_lower)
 
         for word in words:
             # Calculate similarity between word and wake word

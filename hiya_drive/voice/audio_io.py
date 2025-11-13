@@ -25,7 +25,9 @@ class MacAudioIO:
         self.channels = settings.channels
         self.chunk_size = settings.audio_chunk_size
         self.silence_threshold = settings.silence_threshold
-        self.silence_duration = settings.silence_duration  # Seconds of silence to stop recording
+        self.silence_duration = (
+            settings.silence_duration
+        )  # Seconds of silence to stop recording
 
         self.input_stream = None
         self.output_stream = None
@@ -100,7 +102,9 @@ class MacAudioIO:
                 data = self.input_stream.read(
                     self.chunk_size, exception_on_overflow=False
                 )
-                audio_data = np.frombuffer(data, dtype=np.int16)  # int16 to match output format
+                audio_data = np.frombuffer(
+                    data, dtype=np.int16
+                )  # int16 to match output format
                 self.audio_queue.put(audio_data)
             except Exception as e:
                 logger.error(f"Error reading from microphone: {e}")
@@ -129,10 +133,14 @@ class MacAudioIO:
         Returns:
             Audio data as bytes (PCM int16 format)
         """
-        logger.info(f"Recording (max {duration}s, early stop on {self.silence_duration}s silence)...")
+        logger.info(
+            f"Recording (max {duration}s, early stop on {self.silence_duration}s silence)..."
+        )
         frames = []
         silence_frames = 0
-        silence_threshold_frames = int(self.sample_rate / self.chunk_size * self.silence_duration)
+        silence_threshold_frames = int(
+            self.sample_rate / self.chunk_size * self.silence_duration
+        )
 
         try:
             stream_kwargs = {
@@ -171,7 +179,9 @@ class MacAudioIO:
                         silence_frames += 1
                         # Stop if enough silence after speech
                         if silence_frames >= silence_threshold_frames:
-                            logger.info(f"VAD: Silence detected, stopping early at {i}/{chunks_needed} chunks")
+                            logger.info(
+                                f"VAD: Silence detected, stopping early at {i}/{chunks_needed} chunks"
+                            )
                             break
 
                 if on_chunk:
@@ -254,7 +264,9 @@ class MacAudioIO:
 
             with wave.open(str(filepath), "wb") as wav_file:
                 wav_file.setnchannels(self.channels)
-                wav_file.setsampwidth(self.pyaudio.get_sample_size(pyaudio.paInt16))  # int16
+                wav_file.setsampwidth(
+                    self.pyaudio.get_sample_size(pyaudio.paInt16)
+                )  # int16
                 wav_file.setframerate(self.sample_rate)
                 wav_file.writeframes(audio_data)
 
