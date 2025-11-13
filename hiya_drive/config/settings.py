@@ -29,8 +29,8 @@ class Settings(BaseSettings):
     elevenlabs_api_key: str = Field(default="", env="ELEVENLABS_API_KEY")
     elevenlabs_voice_id: str = Field(default="sarah", env="ELEVENLABS_VOICE_ID")
 
-    google_calendar_credentials: Optional[str] = Field(
-        default=None, env="GOOGLE_CALENDAR_CREDENTIALS"
+    google_calendar_credentials_path: Optional[str] = Field(
+        default=None, env="GOOGLE_CALENDAR_CREDENTIALS_PATH"
     )
     google_places_api_key: str = Field(default="", env="GOOGLE_PLACES_API_KEY")
 
@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     audio_chunk_size: int = Field(default=4096, env="AUDIO_CHUNK_SIZE")
     voice_timeout: int = Field(default=30, env="VOICE_TIMEOUT")
     silence_threshold: float = Field(default=-40.0, env="SILENCE_THRESHOLD")
+
+    # =========================================================================
+    # Wake Word & Voice Detection
+    # =========================================================================
+
+    wake_word: str = Field(default="hiya", env="WAKE_WORD")
+    enable_wake_word_detection: bool = Field(default=True, env="ENABLE_WAKE_WORD_DETECTION")
+    wake_word_sensitivity: float = Field(default=0.5, env="WAKE_WORD_SENSITIVITY")
 
     # =========================================================================
     # Feature Flags

@@ -11,6 +11,7 @@ from typing import Optional
 from hiya_drive.core.orchestrator import orchestrator
 from hiya_drive.voice.voice_processor import voice_processor
 from hiya_drive.voice.audio_io import audio_io
+from hiya_drive.voice.wake_word_detector import wake_word_detector
 from hiya_drive.config.settings import settings
 from hiya_drive.utils.logger import logger
 
@@ -158,6 +159,125 @@ async def _run_demo(utterance: Optional[str], driver_id: str, interactive: bool)
     except Exception as e:
         click.secho(f"❌ Error: {e}", fg="red")
         logger.exception("Demo error")
+
+
+@cli.command()
+@click.option(
+    "--driver-id",
+    default="voice_driver_001",
+    help="Driver ID for the session",
+)
+def voice(driver_id: str):
+    """
+    Run HiyaDrive in voice-first mode.
+    Listens for 'hiya' wake word and greets the user.
+
+    Examples:
+        hiya-drive voice
+        hiya-drive voice --driver-id my_driver_123
+    """
+    asyncio.run(_run_voice_mode(driver_id))
+
+
+async def _run_voice_mode(driver_id: str):
+    """Run HiyaDrive in voice-first mode with wake word detection."""
+
+    click.secho("\n" + "=" * 70, fg="cyan", bold=True)
+    click.secho("   HiyaDrive - Voice Mode (Wake Word Enabled)", fg="cyan", bold=True)
+    click.secho("=" * 70 + "\n", fg="cyan", bold=True)
+
+    click.echo(f"Driver ID: {driver_id}")
+    click.echo(f"Wake Word: '{settings.wake_word}'")
+    click.echo()
+
+    try:
+        # Listen for wake word
+        click.secho("🎤 Listening for wake word...", fg="yellow")
+        click.echo("   Say 'hiya' to activate HiyaDrive")
+        click.echo()
+
+        detected = await wake_word_detector.listen_for_wake_word_and_greet(timeout=120)
+
+        if not detected:
+            click.secho("❌ Wake word not detected (timeout).", fg="red")
+            return
+
+        click.echo()
+
+        # Ask about task
+        click.secho("📋 What would you like me to do?", fg="yellow")
+        click.echo("   Examples:")
+        click.echo("   - Book a table for 2 at Italian next Friday at 7 PM")
+        click.echo("   - Make a reservation for 4 people at a sushi place")
+        click.echo()
+
+        # Listen for user task
+        click.secho("🎤 Listening for your request...", fg="yellow")
+        utterance = await voice_processor.listen_and_transcribe(
+            duration=settings.voice_timeout
+        )
+
+        if not utterance:
+            click.secho("❌ No speech detected. Please try again.", fg="red")
+            await voice_processor.speak("Sorry, I didn't hear that. Please try again.")
+            return
+
+        click.secho(f"✓ You said: {utterance}", fg="green")
+        click.echo()
+
+        # Run the booking workflow
+        click.secho("▶ Processing your request...\n", fg="yellow")
+
+        final_state = await orchestrator.run_booking_session(
+            driver_id=driver_id,
+            initial_utterance=utterance,
+        )
+
+        # Display results
+        click.secho("\n" + "-" * 70, fg="cyan")
+        click.secho("📊 BOOKING SESSION RESULTS", fg="cyan", bold=True)
+        click.secho("-" * 70, fg="cyan")
+
+        click.echo()
+        click.echo(f"Session ID:          {final_state.session_id}")
+        click.echo(f"Status:              {final_state.status.value.upper()}")
+        click.echo(f"Duration:            ~{(datetime.now() - final_state.start_time).total_seconds():.1f}s")
+        click.echo()
+
+        if final_state.booking_confirmed:
+            click.secho("✅ BOOKING CONFIRMED", fg="green", bold=True)
+            click.echo()
+            click.echo(f"  Restaurant:        {final_state.selected_restaurant.name}")
+            click.echo(f"  Phone:             {final_state.selected_restaurant.phone}")
+            click.echo(f"  Party Size:        {final_state.party_size}")
+            click.echo(f"  Date:              {final_state.requested_date}")
+            click.echo(f"  Time:              {final_state.requested_time}")
+            click.echo(f"  Confirmation #:    {final_state.confirmation_number}")
+            click.echo()
+
+            # Speak confirmation
+            confirmation_text = (
+                f"Your reservation at {final_state.selected_restaurant.name} "
+                f"for {final_state.party_size} on {final_state.requested_date} "
+                f"at {final_state.requested_time} is confirmed. "
+                f"Confirmation number: {final_state.confirmation_number}"
+            )
+            await voice_processor.speak(confirmation_text)
+
+        else:
+            click.secho("❌ BOOKING FAILED", fg="red", bold=True)
+            click.echo()
+            if final_state.errors:
+                click.echo("Errors:")
+                for error in final_state.errors:
+                    click.echo(f"  - {error}")
+
+        click.echo()
+        click.secho("-" * 70, fg="cyan")
+
+    except Exception as e:
+        click.secho(f"❌ Error: {e}", fg="red")
+        logger.exception("Voice mode error")
 
 
 @cli.command()

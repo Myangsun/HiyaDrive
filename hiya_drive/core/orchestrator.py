@@ -14,6 +14,9 @@ from anthropic import Anthropic
 from hiya_drive.models.state import DrivingBookingState, SessionStatus, Restaurant
 from hiya_drive.utils.logger import logger
 from hiya_drive.config.settings import settings
+from hiya_drive.integrations.calendar_service import calendar_service
+from hiya_drive.integrations.places_service import places_service
+from hiya_drive.integrations.twilio_service import twilio_service
 
 
 class BookingOrchestrator:
@@ -195,14 +198,20 @@ class BookingOrchestrator:
         """Check driver's calendar availability."""
         logger.info(f"[{state.session_id}] Checking calendar availability")
 
-        # For MVP: mock calendar check
+        # Check calendar
         if settings.use_mock_calendar or settings.demo_mode:
             # Always available in demo mode
             state.driver_calendar_free = True
             logger.info(f"[{state.session_id}] Calendar: Available (mocked)")
         else:
-            # Real implementation would call Google Calendar API
-            state.driver_calendar_free = True
+            # Use Google Calendar API
+            try:
+                booking_time = f"{state.requested_date} at {state.requested_time}"
+                state.driver_calendar_free = await calendar_service.is_available(booking_time)
+                logger.info(f"[{state.session_id}] Calendar: {'Available' if state.driver_calendar_free else 'Busy'}")
+            except Exception as e:
+                logger.warning(f"[{state.session_id}] Calendar check failed: {e}, assuming available")
+                state.driver_calendar_free = True
 
         return state
 
@@ -212,7 +221,7 @@ class BookingOrchestrator:
             f"[{state.session_id}] Searching for {state.cuisine_type} restaurants in {state.location}"
         )
 
-        # For MVP: mock restaurant search
+        # Search restaurants
         if settings.use_mock_places or settings.demo_mode:
             # Return mock restaurants
             mock_restaurants = [
@@ -238,8 +247,18 @@ class BookingOrchestrator:
             state.restaurant_candidates = mock_restaurants
             logger.info(f"[{state.session_id}] Found {len(mock_restaurants)} restaurants (mocked)")
         else:
-            # Real implementation would call Google Places API
-            state.restaurant_candidates = []
+            # Use Google Places API
+            try:
+                restaurants = await places_service.search_restaurants(
+                    cuisine_type=state.cuisine_type,
+                    location=state.location,
+                    party_size=state.party_size
+                )
+                state.restaurant_candidates = restaurants
+                logger.info(f"[{state.session_id}] Found {len(restaurants)} restaurants via Google Places")
+            except Exception as e:
+                logger.error(f"[{state.session_id}] Restaurant search failed: {e}")
+                state.restaurant_candidates = []
 
         return state
 
@@ -323,14 +342,29 @@ Be natural and friendly. Format: [SCRIPT] your script here [END]"""
             state.add_error("No restaurant to call")
             return state
 
-        # For MVP: mock Twilio call
+        # Make the call
         if settings.use_mock_twilio or settings.demo_mode:
             state.twilio_call_sid = f"mock_call_{uuid.uuid4().hex[:8]}"
             state.call_connected = True
             logger.info(f"[{state.session_id}] Call initiated (mocked): {state.twilio_call_sid}")
         else:
-            # Real implementation would call Twilio API
-            state.call_connected = True
+            # Use real Twilio API
+            try:
+                call_sid = await twilio_service.make_call(
+                    to_number=state.selected_restaurant.phone,
+                    opening_script=state.call_opening_script
+                )
+                if call_sid:
+                    state.twilio_call_sid = call_sid
+                    state.call_connected = True
+                    logger.info(f"[{state.session_id}] Call initiated: {call_sid}")
+                else:
+                    state.add_error("Failed to initiate Twilio call")
+                    state.call_connected = False
+            except Exception as e:
+                logger.error(f"[{state.session_id}] Error making call: {e}")
+                state.add_error(f"Call failed: {str(e)}")
+                state.call_connected = False
 
         return state
 

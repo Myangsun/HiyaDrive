@@ -91,6 +91,63 @@ class DeepgramSTT(STTProvider):
             raise
 
 
+class ElevenLabsSTT(STTProvider):
+    """ElevenLabs Speech-to-Text implementation."""
+
+    def __init__(self):
+        """Initialize ElevenLabs client for STT."""
+        try:
+            from elevenlabs import ElevenLabs
+        except ImportError:
+            raise ImportError("elevenlabs not installed. Install with: pip install elevenlabs")
+
+        if not settings.elevenlabs_api_key:
+            raise ValueError("ELEVENLABS_API_KEY must be set")
+
+        self.client = ElevenLabs(api_key=settings.elevenlabs_api_key)
+
+    async def transcribe(self, audio_data: bytes) -> str:
+        """Transcribe using ElevenLabs STT API."""
+        logger.info(f"ElevenLabsSTT: Transcribing {len(audio_data)} bytes")
+
+        try:
+            from pathlib import Path
+            import tempfile
+
+            # Create temporary WAV file
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                tmp.write(audio_data)
+                tmp_path = tmp.name
+
+            try:
+                # Use ElevenLabs speech-to-text API
+                # The correct API method is speech_to_text.convert()
+                with open(tmp_path, "rb") as audio_file:
+                    response = self.client.speech_to_text.convert(
+                        audio=audio_file,
+                        language_code="en"
+                    )
+
+                # Extract transcript from response
+                transcript = ""
+                if isinstance(response, dict):
+                    transcript = response.get("text", "")
+                else:
+                    # If response is an object, try to get text attribute
+                    transcript = getattr(response, "text", str(response))
+
+                logger.info(f"ElevenLabsSTT: Transcribed -> '{transcript}'")
+                return transcript
+
+            finally:
+                # Clean up temp file
+                Path(tmp_path).unlink(missing_ok=True)
+
+        except Exception as e:
+            logger.error(f"ElevenLabsSTT transcription error: {e}")
+            raise
+
+
 class MockTTS(TTSProvider):
     """Mock TTS for development/demo."""
 
@@ -162,10 +219,10 @@ class VoiceProcessor:
             logger.info("Using MockSTT")
         else:
             try:
-                self.stt = DeepgramSTT()
-                logger.info("Using Deepgram STT")
+                self.stt = ElevenLabsSTT()
+                logger.info("Using ElevenLabs STT")
             except Exception as e:
-                logger.warning(f"Deepgram STT init failed: {e}, falling back to mock")
+                logger.warning(f"ElevenLabs STT init failed: {e}, falling back to mock")
                 self.stt = MockSTT()
 
     def _init_tts(self) -> None:
