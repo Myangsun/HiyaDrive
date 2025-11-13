@@ -108,8 +108,8 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
                     f"[{state.session_id}] Step 1 Complete: All booking details confirmed"
                 )
                 step1_confirmation = (
-                    f"Perfect! I have confirmed your booking request: {state.party_size} people at a "
-                    f"{state.cuisine_type} restaurant in {state.location} on {state.requested_date} at {state.requested_time}. "
+                    f"Perfect! I have confirmed your request: {state.party_size} people for a "
+                    f"{state.cuisine_type} service in {state.location} on {state.requested_date} at {state.requested_time}. "
                     f"Let me proceed with checking your availability."
                 )
                 await voice_processor.speak(step1_confirmation)
@@ -241,18 +241,18 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
 
                 # Only proceed if calendar was confirmed
                 if state.status not in [SessionStatus.FAILED, SessionStatus.CANCELLED]:
-                    # Step 3: Search Restaurants
-                    logger.info(f"[{state.session_id}] Step 3: Searching restaurants")
+                    # Step 3: Search for Services/Vendors
+                    logger.info(f"[{state.session_id}] Step 3: Searching for options")
 
-                    search_msg = f"Searching for {state.cuisine_type} restaurants in {state.location}..."
+                    search_msg = f"Searching for {state.cuisine_type} services in {state.location}..."
                     await voice_processor.speak(search_msg)
 
                     state = await self.search_restaurants(state)
 
                     if state.errors:
                         error_msg = (
-                            f"Sorry, I couldn't find {state.cuisine_type} restaurants in {state.location}. "
-                            "Try a different location or cuisine type."
+                            f"Sorry, I couldn't find {state.cuisine_type} services in {state.location}. "
+                            "Try a different location or service type."
                         )
                         await voice_processor.speak(error_msg)
                         await asyncio.sleep(0.5)
@@ -268,9 +268,9 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
                         await voice_processor.speak(found_msg)
                         await asyncio.sleep(0.5)
 
-                        # Step 4: Present Restaurant Options with Continuous Listening
+                        # Step 4: Present Options with Continuous Listening
                         logger.info(
-                            f"[{state.session_id}] Step 4: Presenting restaurant options"
+                            f"[{state.session_id}] Step 4: Presenting options"
                         )
 
                         options_intro = "Here are the top options:"
@@ -353,13 +353,13 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
                                 )
                                 selected_option = None
 
-                        # Select the restaurant based on user choice or default to highest-rated
+                        # Select the vendor based on user choice or default to highest-rated
                         state = await self.select_restaurant(
                             state, user_choice=selected_option
                         )
 
                         if state.errors or not state.selected_restaurant:
-                            error_msg = "Sorry, I couldn't select a restaurant. Please try again."
+                            error_msg = "Sorry, I couldn't select an option. Please try again."
                             await voice_processor.speak(error_msg)
                             await asyncio.sleep(0.5)
                             state.status = SessionStatus.FAILED
@@ -369,7 +369,7 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
 
                         # Step 5: Prepare Call Script
                         logger.info(
-                            f"[{state.session_id}] Step 5: Preparing call script"
+                            f"[{state.session_id}] Step 5: Preparing contact"
                         )
 
                         # Prepare the call opening script
@@ -377,13 +377,13 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
 
                         # Simply announce we're about to call
                         call_announce = (
-                            f"I'm about to call {state.selected_restaurant.name}."
+                            f"I'm about to contact {state.selected_restaurant.name}."
                         )
                         await voice_processor.speak(call_announce)
                         await asyncio.sleep(0.5)
 
                         # Ask for confirmation
-                        script_confirm = "Should I call them now?"
+                        script_confirm = "Should I proceed?"
                         await voice_processor.speak(script_confirm)
 
                         user_confirm = await voice_processor.listen_and_transcribe(
@@ -407,12 +407,12 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
                             SessionStatus.CANCELLED,
                         ]:
                             # Step 6: Make Call
-                            logger.info(f"[{state.session_id}] Step 6: Making call")
+                            logger.info(f"[{state.session_id}] Step 6: Contacting service")
 
                             state = await self.make_call(state)
 
                             if state.errors:
-                                error_msg = "Sorry, I couldn't reach the restaurant. Please try again later."
+                                error_msg = "Sorry, I couldn't reach them. Please try again later."
                                 await voice_processor.speak(error_msg)
                                 await asyncio.sleep(0.5)
                                 state.status = SessionStatus.FAILED
@@ -426,11 +426,11 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
 
                                 # Step 7: Converse
                                 logger.info(
-                                    f"[{state.session_id}] Step 7: Conversing with restaurant"
+                                    f"[{state.session_id}] Step 7: Conversing with service"
                                 )
 
                                 await voice_processor.speak(
-                                    "Speaking with the restaurant..."
+                                    "Speaking with the service..."
                                 )
                                 state = await self.converse(state)
                                 await asyncio.sleep(0.5)
@@ -441,7 +441,7 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
                             SessionStatus.CANCELLED,
                         ]:
                             if not state.booking_confirmed:
-                                error_msg = "The restaurant couldn't confirm your booking. Please try again."
+                                error_msg = "The service couldn't confirm your request. Please try again."
                                 await voice_processor.speak(error_msg)
                                 await asyncio.sleep(0.5)
                                 state.status = SessionStatus.FAILED
@@ -474,11 +474,11 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
 
                                     if success:
                                         logger.info(
-                                            f"[{state.session_id}] Reservation added to calendar successfully"
+                                            f"[{state.session_id}] Appointment added to calendar successfully"
                                         )
                                         calendar_status = "Added to calendar"
                                         # Inform user
-                                        calendar_confirm = "I've saved your reservation to your calendar."
+                                        calendar_confirm = "I've saved your appointment to your calendar."
                                         await voice_processor.speak(calendar_confirm)
                                         await asyncio.sleep(0.5)
                                     else:

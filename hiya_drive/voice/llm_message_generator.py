@@ -32,7 +32,7 @@ class LLMMessageGenerator:
                         "role": "user",
                         "content": (
                             "Generate a brief, warm greeting (1-2 sentences) for HiyaDrive, "
-                            "a voice-activated restaurant booking assistant. "
+                            "a voice-activated assistant that helps book services and schedule appointments. "
                             "Make it friendly and conversational. Do not use quotes."
                         ),
                     }
@@ -60,7 +60,7 @@ class LLMMessageGenerator:
 
         try:
             prompt = (
-                f"A restaurant booking assistant just parsed a user's request. "
+                f"A service booking assistant just parsed a user's request. "
                 f"Confirm the details naturally and conversationally (2-3 sentences): "
                 f"- Party size: {party_size} people\n"
                 f"- Cuisine: {cuisine_type}\n"
@@ -84,7 +84,7 @@ class LLMMessageGenerator:
             logger.error(f"Error generating intent confirmation: {e}")
             return (
                 f"Perfect! I understand you want to book for {party_size} people "
-                f"at a {cuisine_type} restaurant in {location} on {date} at {time}. "
+                f"for {cuisine_type} service in {location} on {date} at {time}. "
                 f"Is that correct?"
             )
 
@@ -118,8 +118,8 @@ class LLMMessageGenerator:
     async def generate_restaurant_found_message(
         self, count: int, cuisine_type: str
     ) -> str:
-        """Generate message when restaurants are found."""
-        logger.info("Generating restaurant found message with LLM")
+        """Generate message when services/options are found."""
+        logger.info("Generating options found message with LLM")
 
         try:
             message = self.client.messages.create(
@@ -130,7 +130,7 @@ class LLMMessageGenerator:
                         "role": "user",
                         "content": (
                             f"Generate a brief, enthusiastic message (1 sentence) announcing "
-                            f"that we found {count} {cuisine_type} restaurants. "
+                            f"that we found {count} {cuisine_type} options. "
                             f"Be conversational. Do not use quotes."
                         ),
                     }
@@ -138,12 +138,12 @@ class LLMMessageGenerator:
             )
 
             announcement = message.content[0].text.strip()
-            logger.info(f"Generated restaurant found message: {announcement}")
+            logger.info(f"Generated options found message: {announcement}")
             return announcement
 
         except Exception as e:
-            logger.error(f"Error generating restaurant found message: {e}")
-            return f"Excellent! I found {count} wonderful {cuisine_type} restaurants for you!"
+            logger.error(f"Error generating options found message: {e}")
+            return f"Excellent! I found {count} wonderful {cuisine_type} options for you!"
 
     async def generate_restaurant_option_intro() -> str:
         """Generate intro message for presenting restaurant options."""
@@ -458,11 +458,11 @@ Be strict: only extract clear corrections. "2." alone doesn't change party size.
         num_options: int = 3,
     ) -> dict:
         """
-        Extract which restaurant option the user selected from their response.
+        Extract which option the user selected from their response.
 
         Args:
             user_response: User's spoken response (e.g., "I want option 1" or "the first one")
-            num_options: Number of restaurant options presented (1-3)
+            num_options: Number of options presented (1-3)
 
         Returns:
             dict with:
@@ -470,7 +470,7 @@ Be strict: only extract clear corrections. "2." alone doesn't change party size.
             - confidence: "high", "medium", or "low"
             - feedback: brief explanation
         """
-        logger.info(f"Extracting restaurant selection from: {user_response}")
+        logger.info(f"Extracting option selection from: {user_response}")
 
         try:
             message = self.client.messages.create(
@@ -479,7 +479,7 @@ Be strict: only extract clear corrections. "2." alone doesn't change party size.
                 messages=[
                     {
                         "role": "user",
-                        "content": f"""Analyze this user response and determine which restaurant option they selected.
+                        "content": f"""Analyze this user response and determine which option they selected.
 
 There are {num_options} options presented: Option 1, Option 2, Option 3 (if applicable).
 

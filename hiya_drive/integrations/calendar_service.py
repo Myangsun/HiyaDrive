@@ -1,5 +1,5 @@
 """
-Google Calendar integration for checking driver availability.
+Google Calendar integration for checking driver availability and scheduling appointments.
 """
 
 from datetime import datetime, timedelta
@@ -177,13 +177,13 @@ class CalendarService:
         confirmation_number: str = None,
     ) -> bool:
         """
-        Add a restaurant reservation to Google Calendar.
+        Add a service appointment to Google Calendar.
 
         Args:
-            restaurant_name: Name of the restaurant
+            restaurant_name: Name of the service/business
             reservation_time: DateTime string (e.g., "next Friday at 7 PM")
-            party_size: Number of people
-            duration_minutes: Duration of reservation
+            party_size: Number of people/group size
+            duration_minutes: Duration of appointment
             confirmation_number: Optional confirmation number
 
         Returns:
@@ -239,8 +239,8 @@ class CalendarService:
 
             # Create the calendar event
             event = {
-                "summary": f"Dinner at {restaurant_name}",
-                "description": f"Restaurant reservation for {party_size} people"
+                "summary": f"Appointment at {restaurant_name}",
+                "description": f"Service booked for {party_size} people"
                 + (
                     f"\nConfirmation #: {confirmation_number}"
                     if confirmation_number
