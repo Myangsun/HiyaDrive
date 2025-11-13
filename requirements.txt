@@ -31,6 +31,8 @@ python-dotenv>=1.0.0
 pydantic-settings>=2.1.0
 loguru>=0.7.0
 click>=8.1.0
+dateparser
+
 
 # Testing
 pytest>=7.4

@@ -92,19 +92,38 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
                 self._update_state_from_extracted(state, extracted)
                 logger.info(f"[{state.session_id}] State updated: party_size={state.party_size}, cuisine={state.cuisine_type}, location={state.location}, date={state.requested_date}, time={state.requested_time}")
 
+            # Step 1 Confirmation - All details collected
+            logger.info(f"[{state.session_id}] Step 1 Complete: All booking details confirmed")
+            step1_confirmation = (
+                f"Perfect! I have confirmed your booking request: {state.party_size} people at a "
+                f"{state.cuisine_type} restaurant in {state.location} on {state.requested_date} at {state.requested_time}. "
+                f"Let me proceed with checking your availability."
+            )
+            await voice_processor.speak(step1_confirmation)
+            await asyncio.sleep(0.5)
+
             # Step 2: Check Calendar
             logger.info(f"[{state.session_id}] Step 2: Checking calendar")
+
+            # Announce we're checking calendar
+            announce_check = "Now let me check your calendar availability..."
+            await voice_processor.speak(announce_check)
+            await asyncio.sleep(0.5)
+
             state = await self.check_calendar(state)
 
             if state.errors:
-                error_msg = "Let me check your calendar..."
+                error_msg = f"Sorry, I couldn't check your calendar. Error: {state.errors[0]}"
                 await voice_processor.speak(error_msg)
                 await asyncio.sleep(0.5)
+                return state
             else:
-                calendar_msg = await message_generator.generate_calendar_check_message(
-                    date=state.requested_date, time=state.requested_time
+                # Professional availability report
+                availability_msg = (
+                    f"Great! You are available at {state.requested_time} on {state.requested_date}."
                 )
-                await voice_processor.speak(calendar_msg)
+                await voice_processor.speak(availability_msg)
+                logger.info(f"[{state.session_id}] Calendar check passed - user available at {state.requested_time}")
                 await asyncio.sleep(0.5)
 
             # Step 3: Search Restaurants

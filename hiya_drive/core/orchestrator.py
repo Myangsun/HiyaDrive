@@ -201,12 +201,12 @@ class BookingOrchestrator:
         logger.info(f"[{state.session_id}] Checking calendar availability")
 
         # Check calendar
-        if settings.use_mock_calendar or settings.demo_mode:
-            # Always available in demo mode
+        if settings.use_mock_calendar:
+            # Only use mock if explicitly enabled
             state.driver_calendar_free = True
-            logger.info(f"[{state.session_id}] Calendar: Available (mocked)")
+            logger.info(f"[{state.session_id}] Calendar: Available (mocked via USE_MOCK_CALENDAR)")
         else:
-            # Use Google Calendar API
+            # Try to use Google Calendar API (real credentials required)
             try:
                 booking_time = f"{state.requested_date} at {state.requested_time}"
                 state.driver_calendar_free = await calendar_service.is_available(
@@ -216,10 +216,9 @@ class BookingOrchestrator:
                     f"[{state.session_id}] Calendar: {'Available' if state.driver_calendar_free else 'Busy'}"
                 )
             except Exception as e:
-                logger.warning(
-                    f"[{state.session_id}] Calendar check failed: {e}, assuming available"
-                )
-                state.driver_calendar_free = True
+                error_msg = f"Calendar availability check failed: {str(e)}"
+                logger.error(f"[{state.session_id}] {error_msg}")
+                state.add_error(error_msg)
 
         return state
 
