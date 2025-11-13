@@ -120,13 +120,20 @@ class MacAudioIO:
         frames = []
 
         try:
-            stream = self.pyaudio.open(
-                format=pyaudio.paFloat32,
-                channels=self.channels,
-                rate=self.sample_rate,
-                input=True,
-                frames_per_buffer=self.chunk_size,
-            )
+            stream_kwargs = {
+                "format": pyaudio.paFloat32,
+                "channels": self.channels,
+                "rate": self.sample_rate,
+                "input": True,
+                "frames_per_buffer": self.chunk_size,
+            }
+
+            # Use specific input device if configured
+            if settings.audio_input_device >= 0:
+                stream_kwargs["input_device_index"] = settings.audio_input_device
+                logger.debug(f"Using audio input device: {settings.audio_input_device}")
+
+            stream = self.pyaudio.open(**stream_kwargs)
 
             chunks_needed = int((self.sample_rate / self.chunk_size) * duration)
 

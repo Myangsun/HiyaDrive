@@ -4,6 +4,8 @@ Detects the "hiya" wake word from audio input.
 """
 
 import asyncio
+import re
+from difflib import SequenceMatcher
 from hiya_drive.config.settings import settings
 from hiya_drive.utils.logger import logger
 from hiya_drive.voice.voice_processor import voice_processor
@@ -16,7 +18,45 @@ class WakeWordDetector:
         """Initialize wake word detector."""
         self.wake_word = settings.wake_word.lower()
         self.enabled = settings.enable_wake_word_detection
-        logger.info(f"Wake word detector initialized: '{self.wake_word}'")
+        self.similarity_threshold = 0.7  # 70% match required
+        logger.info(f"Wake word detector initialized: '{self.wake_word}' (threshold: {self.similarity_threshold})")
+
+    def _detect_wake_word(self, transcript: str) -> bool:
+        """
+        Detect wake word using fuzzy matching.
+
+        Args:
+            transcript: Transcribed text to check
+
+        Returns:
+            True if wake word detected with sufficient confidence
+        """
+        if not transcript:
+            return False
+
+        text_lower = transcript.lower()
+
+        # Method 1: Exact substring match (fastest)
+        if self.wake_word in text_lower:
+            logger.info(f"✓ Exact match found for '{self.wake_word}'")
+            return True
+
+        # Method 2: Extract single words and fuzzy match them
+        # Remove punctuation and split into words
+        words = re.findall(r'\b\w+\b', text_lower)
+
+        for word in words:
+            # Calculate similarity between word and wake word
+            similarity = SequenceMatcher(None, self.wake_word, word).ratio()
+
+            if similarity >= self.similarity_threshold:
+                logger.info(
+                    f"✓ Fuzzy match found: '{word}' matches '{self.wake_word}' "
+                    f"(confidence: {similarity:.1%})"
+                )
+                return True
+
+        return False
 
     async def listen_for_wake_word(self, timeout: float = 120.0) -> bool:
         """
@@ -50,10 +90,10 @@ class WakeWordDetector:
                 )
 
                 if transcript:
-                    transcript_lower = transcript.lower()
                     logger.info(f"Heard: '{transcript}'")
 
-                    if self.wake_word in transcript_lower:
+                    # Use fuzzy matching to detect wake word
+                    if self._detect_wake_word(transcript):
                         logger.info(f"✓ Wake word '{self.wake_word}' detected!")
                         return True
 

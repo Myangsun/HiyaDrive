@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     # =========================================================================
 
     anthropic_api_key: str = Field(default="", env="ANTHROPIC_API_KEY")
+    openai_api_key: str = Field(default="", env="OPENAI_API_KEY")
     deepgram_api_key: str = Field(default="", env="DEEPGRAM_API_KEY")
     elevenlabs_api_key: str = Field(default="", env="ELEVENLABS_API_KEY")
     elevenlabs_voice_id: str = Field(default="sarah", env="ELEVENLABS_VOICE_ID")
@@ -52,6 +53,7 @@ class Settings(BaseSettings):
     sample_rate: int = Field(default=16000, env="SAMPLE_RATE")
     channels: int = Field(default=1, env="CHANNELS")
     audio_chunk_size: int = Field(default=4096, env="AUDIO_CHUNK_SIZE")
+    audio_input_device: int = Field(default=-1, env="AUDIO_INPUT_DEVICE")  # -1 = default
     voice_timeout: int = Field(default=30, env="VOICE_TIMEOUT")
     silence_threshold: float = Field(default=-40.0, env="SILENCE_THRESHOLD")
 

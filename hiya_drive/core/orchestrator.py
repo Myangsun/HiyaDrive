@@ -24,7 +24,7 @@ class BookingOrchestrator:
 
     def __init__(self):
         """Initialize the orchestrator with Claude client."""
-        self.client = Anthropic()
+        self.client = Anthropic(api_key=settings.anthropic_api_key)
         self.workflow = self._build_workflow()
         self.app = self.workflow.compile()
 

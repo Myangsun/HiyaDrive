@@ -119,7 +119,6 @@ class ElevenLabsSTT(STTProvider):
         try:
             import io
             import wave
-            from hiya_drive.config.settings import settings
 
             # Convert raw PCM bytes to WAV format
             # Audio was recorded as float32 at 16000 Hz, mono
