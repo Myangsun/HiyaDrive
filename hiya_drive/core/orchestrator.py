@@ -40,8 +40,10 @@ class BookingOrchestrator:
         workflow.add_node("confirm_booking", self.confirm_booking)
         workflow.add_node("handle_error", self.handle_error)
 
+        # Set entry point
+        workflow.set_entry_point("parse_intent")
+
         # Define edges (main happy path)
-        workflow.add_edge("START", "parse_intent")
         workflow.add_edge("parse_intent", "check_calendar")
         workflow.add_edge("check_calendar", "search_restaurants")
         workflow.add_edge("search_restaurants", "select_restaurant")
