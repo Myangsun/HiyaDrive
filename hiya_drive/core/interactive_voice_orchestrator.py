@@ -297,28 +297,29 @@ class InteractiveVoiceOrchestrator(BookingOrchestrator):
                             # Format the reservation time for calendar
                             calendar_time_str = f"{state.requested_date} at {state.requested_time}"
 
-                            # Check calendar availability to confirm time is free (and add event if possible)
-                            logger.info(f"[{state.session_id}] Adding reservation to calendar: {state.selected_restaurant.name} at {calendar_time_str}")
+                            # Add the event to Google Calendar
+                            success = await calendar_service.add_reservation_event(
+                                restaurant_name=state.selected_restaurant.name,
+                                reservation_time=calendar_time_str,
+                                party_size=state.party_size,
+                                duration_minutes=120,
+                                confirmation_number=state.confirmation_number
+                            )
 
-                            # Try to add event to calendar (using availability check as confirmation)
-                            is_available = await calendar_service.is_available(calendar_time_str, duration_minutes=120)
-
-                            if is_available is False:
-                                # Time slot has conflicts - but booking is already confirmed
-                                logger.warning(f"[{state.session_id}] Calendar shows conflicts but booking is confirmed")
-                                calendar_status = "Added to calendar (with conflicts)"
-                            else:
+                            if success:
                                 logger.info(f"[{state.session_id}] Reservation added to calendar successfully")
                                 calendar_status = "Added to calendar"
-
-                            # Inform user
-                            calendar_confirm = f"I've saved your reservation to your calendar."
-                            await voice_processor.speak(calendar_confirm)
-                            await asyncio.sleep(0.5)
+                                # Inform user
+                                calendar_confirm = "I've saved your reservation to your calendar."
+                                await voice_processor.speak(calendar_confirm)
+                                await asyncio.sleep(0.5)
+                            else:
+                                logger.warning(f"[{state.session_id}] Failed to add reservation to calendar")
+                                calendar_status = "Failed to add to calendar"
 
                         except Exception as cal_error:
                             logger.warning(f"[{state.session_id}] Could not add to calendar: {cal_error}")
-                            calendar_status = "Failed to add to calendar"
+                            calendar_status = f"Failed to add to calendar: {str(cal_error)}"
 
                         state.status = SessionStatus.COMPLETED
                         logger.info(f"[{state.session_id}] Booking completed successfully - {calendar_status}")

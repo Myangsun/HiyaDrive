@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     google_calendar_credentials_path: Optional[str] = Field(
         default=None, env="GOOGLE_CALENDAR_CREDENTIALS_PATH"
     )
+    google_calendar_id: str = Field(
+        default="primary", env="GOOGLE_CALENDAR_ID"
+    )
     google_places_api_key: str = Field(default="", env="GOOGLE_PLACES_API_KEY")
 
     twilio_account_sid: str = Field(default="", env="TWILIO_ACCOUNT_SID")
