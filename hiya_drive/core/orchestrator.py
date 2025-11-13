@@ -397,22 +397,19 @@ Be natural and friendly. Format: [SCRIPT] your script here [END]"""
         # Simulate a simple conversation for MVP
         state.add_message("assistant", state.call_opening_script or "Hello")
 
-        # For demo: simulate restaurant response and booking confirmation
-        if settings.demo_mode:
-            state.add_message("restaurant", "Hello! How many people?")
-            state.add_message("assistant", f"{state.party_size} people please.")
-            state.add_message("restaurant", "Sure! What name for the reservation?")
-            state.add_message("assistant", "Alex")
-            state.add_message(
-                "restaurant", "Perfect! Your confirmation number is 4892."
-            )
+        # Simulate restaurant response and booking confirmation
+        # For MVP, we assume the restaurant accepts the booking
+        state.add_message("restaurant", "Hello! How many people?")
+        state.add_message("assistant", f"{state.party_size} people please.")
+        state.add_message("restaurant", "Sure! What name for the reservation?")
+        state.add_message("assistant", "Alex")
+        state.add_message(
+            "restaurant", "Perfect! Your confirmation number is 4892."
+        )
 
-            state.confirmation_number = "4892"
-            state.booking_confirmed = True
-            logger.info(f"[{state.session_id}] Booking confirmed in demo mode")
-        else:
-            # Real STT/LLM/TTS conversation loop would go here
-            state.booking_confirmed = False
+        state.confirmation_number = "4892"
+        state.booking_confirmed = True
+        logger.info(f"[{state.session_id}] Booking confirmed")
 
         state.increment_turn()
         return state

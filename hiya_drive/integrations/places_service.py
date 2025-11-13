@@ -128,6 +128,38 @@ class PlacesService:
                 "aiohttp not installed. Install with: pip install aiohttp"
             )
 
+    async def _get_phone_from_place_details(self, place_id: str) -> str:
+        """
+        Get phone number from Place Details API.
+
+        Args:
+            place_id: Google Places place_id
+
+        Returns:
+            Phone number string or empty string if not found
+        """
+        try:
+            import aiohttp
+
+            url = "https://maps.googleapis.com/maps/api/place/details/json"
+            params = {
+                "place_id": place_id,
+                "fields": "formatted_phone_number",
+                "key": self.api_key,
+            }
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=5)) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if data.get("status") == "OK":
+                            return data.get("result", {}).get("formatted_phone_number", "")
+                    return ""
+
+        except Exception as e:
+            logger.debug(f"Error fetching phone from Place Details: {e}")
+            return ""
+
 
 # Global places service instance
 places_service = PlacesService()

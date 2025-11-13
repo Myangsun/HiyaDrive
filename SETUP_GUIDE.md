@@ -10,24 +10,31 @@ This guide will help you set up the required Google APIs and services for HiyaDr
 
 ---
 
-## 1. Enable Google Places API
+## 1. Enable Google Places APIs
 
-The system requires the **Google Places API** to search for restaurants.
+The system requires **TWO** Google APIs to work:
+- **Places API** - for searching restaurants
+- **Place Details API** - for getting phone numbers
 
-### Steps:
+### Step 1a: Enable Places API (Legacy)
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Select your project from the dropdown at the top
-3. Go to **APIs & Services** → **Library**
-4. Search for **"Places API"**
-5. Click on **Places API** (the legacy one - "Places API (Old)")
-6. Click **Enable**
+2. Go to **APIs & Services** → **Library**
+3. Search for **"Places API"** (the legacy one labeled "Places API (Old)")
+4. Click **Enable**
 
-> ⏱️ **Wait 2-3 minutes** for the API to be enabled across Google's systems
+### Step 1b: Enable Maps JavaScript API (for Place Details)
+
+1. In the same **Library**, search for **"Maps JavaScript API"**
+2. Click **Enable**
+
+> ⏱️ **Wait 2-3 minutes** for both APIs to be enabled across Google's systems
 
 ### Verify It Works:
 
-Once enabled, your existing `GOOGLE_PLACES_API_KEY` in `.env` will work automatically.
+Once enabled, your existing `GOOGLE_PLACES_API_KEY` in `.env` will work automatically. The system will:
+- Use Places API to search for restaurants
+- Use Place Details API to get phone numbers for each restaurant
 
 ---
 
@@ -116,11 +123,12 @@ EOF
 
 | Component | Status | Action |
 |-----------|--------|--------|
-| **Google Places API** | ✓ Enable in Console | [Enable](https://console.cloud.google.com/apis/library/places-backend.googleapis.com) |
-| **Google Calendar API** | ✓ Enable in Console | [Enable](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com) |
-| **Service Account** | ✓ Create in Console | Create new service account |
-| **Calendar Share** | ✓ Share calendar with service account | Invite service account to calendar |
-| **Credentials File** | ✓ Download & save to project | Save as `credentials.json` |
+| **Places API (Legacy)** | ✓ Enable | [Enable](https://console.cloud.google.com/apis/library/places-backend.googleapis.com) |
+| **Maps JavaScript API** | ✓ Enable | [Enable](https://console.cloud.google.com/apis/library/maps-backend.googleapis.com) |
+| **Google Calendar API** | ✓ Enable | [Enable](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com) |
+| **Service Account** | ✓ Create | Create new service account in Credentials |
+| **Calendar Share** | ✓ Share | Invite service account email to your calendar |
+| **Credentials File** | ✓ Download | Save as `credentials.json` in project root |
 
 ---
 
