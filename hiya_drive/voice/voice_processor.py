@@ -97,54 +97,58 @@ class ElevenLabsSTT(STTProvider):
     def __init__(self):
         """Initialize ElevenLabs client for STT."""
         try:
-            from elevenlabs import ElevenLabs
+            from elevenlabs.client import ElevenLabs
         except ImportError:
             raise ImportError("elevenlabs not installed. Install with: pip install elevenlabs")
 
         if not settings.elevenlabs_api_key:
-            raise ValueError("ELEVENLABS_API_KEY must be set")
+            raise ValueError("ELEVENLABS_API_KEY must be set for ElevenLabs STT")
 
         self.client = ElevenLabs(api_key=settings.elevenlabs_api_key)
 
     async def transcribe(self, audio_data: bytes) -> str:
-        """Transcribe using ElevenLabs STT API."""
-        logger.info(f"ElevenLabsSTT: Transcribing {len(audio_data)} bytes")
+        """Transcribe using ElevenLabs Speech-to-Text API."""
+        logger.info(f"ElevenLabs STT: Transcribing {len(audio_data)} bytes")
 
         try:
-            from pathlib import Path
-            import tempfile
+            import io
+            import wave
+            from hiya_drive.config.settings import settings
 
-            # Create temporary WAV file
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-                tmp.write(audio_data)
-                tmp_path = tmp.name
+            # Convert raw PCM bytes to WAV format
+            # Audio was recorded as float32 at 16000 Hz, mono
+            wav_buffer = io.BytesIO()
+            with wave.open(wav_buffer, 'wb') as wav_file:
+                wav_file.setnchannels(settings.channels)
+                wav_file.setsampwidth(4)  # 4 bytes for float32
+                wav_file.setframerate(settings.sample_rate)
+                wav_file.writeframes(audio_data)
 
-            try:
-                # Use ElevenLabs speech-to-text API
-                # The correct API method is speech_to_text.convert()
-                with open(tmp_path, "rb") as audio_file:
-                    response = self.client.speech_to_text.convert(
-                        audio=audio_file,
-                        language_code="en"
-                    )
+            # Reset buffer position to beginning
+            wav_buffer.seek(0)
 
-                # Extract transcript from response
-                transcript = ""
-                if isinstance(response, dict):
-                    transcript = response.get("text", "")
-                else:
-                    # If response is an object, try to get text attribute
-                    transcript = getattr(response, "text", str(response))
+            # Call ElevenLabs speech_to_text API
+            transcription = self.client.speech_to_text.convert(
+                file=wav_buffer,
+                model_id="scribe_v1",
+                language_code="eng",
+            )
 
-                logger.info(f"ElevenLabsSTT: Transcribed -> '{transcript}'")
-                return transcript
+            # Extract transcript from response object
+            transcript = ""
+            if hasattr(transcription, 'text'):
+                transcript = transcription.text
+            elif isinstance(transcription, dict) and 'text' in transcription:
+                transcript = transcription['text']
+            else:
+                transcript = str(transcription)
 
-            finally:
-                # Clean up temp file
-                Path(tmp_path).unlink(missing_ok=True)
+            logger.info(f"ElevenLabs STT: Transcribed -> '{transcript}'")
+
+            return transcript
 
         except Exception as e:
-            logger.error(f"ElevenLabsSTT transcription error: {e}")
+            logger.error(f"ElevenLabs STT transcription error: {e}")
             raise
 
 
