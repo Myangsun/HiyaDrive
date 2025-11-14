@@ -1,6 +1,6 @@
 # HiyaDrive - Voice Booking Agent for Drivers
 
-An AI-powered voice assistant that enables drivers to book restaurant reservations hands-free using voice commands. Built with Claude, LangGraph, and integrated with real APIs for speech recognition, synthesis, calendar management, and phone calls.
+An AI-powered voice assistant that enables drivers to book services and appointments hands-free using voice commands. Perfect for restaurants, salons, services, and any errand that requires a phone call. Built with Claude, LangGraph, and integrated with real APIs for speech recognition, synthesis, calendar management, and phone calls.
 
 **Status**: ✅ Production-Ready with Real APIs
 
@@ -10,11 +10,11 @@ An AI-powered voice assistant that enables drivers to book restaurant reservatio
 
 - 🎤 **Wake Word Detection** - Say "hiya" to activate
 - 🗣️ **Voice Input/Output** - Powered by ElevenLabs STT/TTS
-- 📅 **Calendar Integration** - Google Calendar API
-- 🍽️ **Restaurant Search** - Google Places API
-- 📞 **Phone Calls** - Twilio Voice API
-- 🧠 **Intelligent Processing** - Claude LLM
-- 🌐 **Production Grade** - Real APIs, graceful fallbacks, comprehensive logging
+- 📅 **Calendar Integration** - Google Calendar API for availability checking
+- 🔍 **Service Search** - Google Places API (works with any business type)
+- 📞 **Phone Calls** - Twilio Voice API for booking confirmations
+- 🧠 **Intelligent Processing** - Claude LLM for conversation and intent parsing
+- 🌐 **Production Grade** - Real APIs, comprehensive error handling, full logging
 
 ---
 
@@ -115,8 +115,8 @@ python -m hiya_drive.main voice
 ```bash
 # Say "hiya" to activate the system
 # System responds: "Hi! I'm HiyaDrive. How can I help you today?"
-# You: "Book a table for 2 at Italian next Friday at 7 PM"
-# System: Makes the phone call and books the reservation
+# You: "Book a haircut for tomorrow at 3 PM" (or any service)
+# System: Checks your calendar, finds a salon, calls to book, confirms appointment
 ```
 
 ---
@@ -131,7 +131,8 @@ Complete voice-driven workflow with wake word detection, greeting, and booking.
 
 ### Demo Mode (Text Input)
 ```bash
-python -m hiya_drive.main demo --utterance "Book a table for 2 at Italian next Friday at 7 PM"
+python -m hiya_drive.main demo --utterance "Book a massage for 2 people next Friday at 7 PM"
+# Works with any service: haircut, dental appointment, restaurant, etc.
 ```
 
 ### Interactive Mode (Microphone)
@@ -156,10 +157,10 @@ make status            # Show system configuration
 |---------|---------|----------|--------|
 | Speech-to-Text | Transcribe voice | ElevenLabs | ✅ Real |
 | Text-to-Speech | Speak confirmations | ElevenLabs | ✅ Real |
-| Calendar | Check availability | Google Calendar | ✅ Real |
-| Restaurant Search | Find restaurants | Google Places | ✅ Real |
-| Phone Calls | Call restaurant | Twilio | ✅ Real |
-| LLM | Intent parsing & scripts | Claude Sonnet 4.5 | ✅ Real |
+| Calendar | Check driver availability | Google Calendar | ✅ Real |
+| Business Search | Find services/businesses | Google Places | ✅ Real |
+| Phone Calls | Call to book appointment | Twilio | ✅ Real |
+| LLM | Intent parsing & orchestration | Claude Sonnet 4.5 | ✅ Real |
 
 ---
 
@@ -209,10 +210,10 @@ User says "hiya" (wake word)
 🎤 System generates greeting (Claude LLM) and speaks it (ElevenLabs TTS)
          ↓
 User says: "Book a table for 2 at Italian next Friday at 7 PM"
-         ↓
+         ↓ (or any service: "Schedule haircut", "Book massage", "Reserve parking", etc.)
 ElevenLabs STT transcribes audio (PCM int16 format)
          ↓
-Claude LLM parses intent (party size, cuisine, date, time)
+Claude LLM parses intent (party size, service type, date, time)
          ↓
 🎤 System generates confirmation message and speaks it
          ↓
@@ -221,22 +222,23 @@ User responds: "Yes" or "No"
 [If Yes, continue; If No, start over]
          ↓
 Google Calendar checks if driver is available
+    [If unavailable, asks driver for alternative time - up to 3 attempts]
          ↓
 🎤 System generates availability message
          ↓
-Google Places searches for Italian restaurants
+Google Places searches for matching services
          ↓
-🎤 System announces found restaurants and lists options
+🎤 System announces found options and lists top 3
          ↓
-[System presents top 3 options with ratings and addresses]
+[System presents options with ratings and addresses]
          ↓
-System selects highest-rated restaurant
+System selects highest-rated service provider
          ↓
 🎤 System generates call script and asks for approval
          ↓
 User approves (or declines)
          ↓
-Twilio makes phone call to restaurant
+Twilio makes phone call to service provider
          ↓
 🎤 System confirms connection and simulates conversation
          ↓
@@ -246,12 +248,15 @@ Claude LLM extracts confirmation number
          ↓
 ElevenLabs TTS speaks confirmation with all details
          ↓
-🎤 System generates goodbye message
+Google Calendar saves appointment to driver's calendar
          ↓
-"Your reservation at [Restaurant] for 2 on Friday at 7 PM is confirmed!"
+🎤 System asks: "Is there anything else I could help?"
+         ↓
+End session
 ```
 
 **Key Innovation**: Every message is generated dynamically by Claude LLM - zero hardcoded strings!
+**Calendar Integration**: Real-time availability checking with automatic retry if driver is busy.
 
 ---
 
@@ -382,19 +387,19 @@ HiyaDrive supports multiple orchestrators for different use cases:
 The primary orchestrator with **true conversational flow**:
 
 1. **Welcome Agent** 🎤 - LLM-generated greeting
-2. **Intent Parser Agent** 🎤 - Confirms parsed details, listens for user "yes/no"
-3. **Calendar Checker Agent** 🎤 - Announces availability
-4. **Restaurant Searcher Agent** 🎤 - Announces search results
-5. **Restaurant Selector Agent** 🎤 - Presents top 3 options, asks for preference
-6. **Call Scripter Agent** 🎤 - Generates and confirms script
-7. **Call Initiator Agent** 🎤 - Announces call (only if approved)
-8. **Conversationalist Agent** 🎤 - Simulates conversation with restaurant
-9. **Booking Finalizer Agent** 🎤 - Confirms booking with full details
-10. **Goodbye Agent** 🎤 - LLM-generated farewell
+2. **Intent Parser Agent** 🎤 - Confirms parsed details (service type, time, party size, etc.), listens for user "yes/no"
+3. **Calendar Checker Agent** 🎤 - Checks driver availability; asks for alternative time if busy (up to 3 retries)
+4. **Service Searcher Agent** 🎤 - Searches for matching businesses/services
+5. **Service Selector Agent** 🎤 - Presents top 3 options with ratings, asks for preference
+6. **Call Scripter Agent** 🎤 - Generates conversation script and confirms with user
+7. **Call Initiator Agent** 🎤 - Announces call initiation (only if approved)
+8. **Conversationalist Agent** 🎤 - Simulates conversation with service provider
+9. **Booking Finalizer Agent** 🎤 - Confirms booking and saves to calendar
+10. **Goodbye Agent** 🎤 - Asks "Is there anything else I could help?"
 
 **Every message is generated dynamically by Claude LLM - no hardcoded strings!**
 
-Each node asks for user feedback and can adapt the flow based on responses.
+Each node asks for user feedback and can adapt the flow based on responses. System works with any service type: restaurants, salons, doctors, services, etc.
 
 ---
 
