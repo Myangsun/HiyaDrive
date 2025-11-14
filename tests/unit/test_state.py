@@ -94,14 +94,14 @@ class TestDrivingBookingState:
     def test_to_dict(self, sample_state):
         """Test converting state to dictionary."""
         sample_state.party_size = 2
-        sample_state.cuisine_type = "Italian"
+        sample_state.cuisine_type = "Hair Salon"  # Generic service type
         sample_state.booking_confirmed = True
 
         state_dict = sample_state.to_dict()
 
         assert state_dict["session_id"] == sample_state.session_id
         assert state_dict["party_size"] == 2
-        assert state_dict["cuisine_type"] == "Italian"
+        assert state_dict["cuisine_type"] == "Hair Salon"
         assert state_dict["booking_confirmed"] is True
 
     def test_state_repr(self, sample_state):
@@ -113,12 +113,12 @@ class TestDrivingBookingState:
         assert "test_session_001" in repr_str
         assert "party_size=2" in repr_str
 
-    def test_with_restaurant(self, sample_state_with_restaurant):
-        """Test state with restaurant selected."""
-        assert sample_state_with_restaurant.selected_restaurant.name == "Olive Garden"
-        assert sample_state_with_restaurant.party_size == 2
-        assert sample_state_with_restaurant.requested_date == "2024-11-22"
-        assert sample_state_with_restaurant.requested_time == "19:00"
+    def test_with_selected_service(self, sample_state_with_service):
+        """Test state with service provider selected."""
+        assert sample_state_with_service.selected_restaurant.name == "StyleCuts Hair Salon"
+        assert sample_state_with_service.party_size == 2
+        assert sample_state_with_service.requested_date == "2024-11-22"
+        assert sample_state_with_service.requested_time == "15:00"
 
     def test_status_transitions(self, sample_state):
         """Test status transitions."""

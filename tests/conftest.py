@@ -1,5 +1,5 @@
 """
-Pytest configuration and shared fixtures.
+Pytest configuration and shared fixtures for service-agnostic booking tests.
 """
 
 import pytest
@@ -29,10 +29,10 @@ def sample_state():
 
 
 @pytest.fixture
-def sample_restaurant():
-    """Create a sample restaurant object."""
+def sample_service():
+    """Create a sample service provider object (works with any service: salon, doctor, restaurant, etc.)."""
     return Restaurant(
-        name="Olive Garden",
+        name="StyleCuts Hair Salon",
         phone="+1-555-0100",
         address="123 Main St, Boston, MA",
         rating=4.2,
@@ -40,10 +40,23 @@ def sample_restaurant():
 
 
 @pytest.fixture
-def sample_state_with_restaurant(sample_state, sample_restaurant):
-    """Create state with selected restaurant."""
-    sample_state.selected_restaurant = sample_restaurant
+def sample_state_with_service(sample_state, sample_service):
+    """Create state with selected service provider."""
+    sample_state.selected_restaurant = sample_service
     sample_state.party_size = 2
     sample_state.requested_date = "2024-11-22"
-    sample_state.requested_time = "19:00"
+    sample_state.requested_time = "15:00"  # 3 PM - typical appointment time
     return sample_state
+
+
+# Backward compatibility aliases (deprecated - use new names above)
+@pytest.fixture
+def sample_restaurant(sample_service):
+    """Deprecated: Use sample_service instead."""
+    return sample_service
+
+
+@pytest.fixture
+def sample_state_with_restaurant(sample_state_with_service):
+    """Deprecated: Use sample_state_with_service instead."""
+    return sample_state_with_service

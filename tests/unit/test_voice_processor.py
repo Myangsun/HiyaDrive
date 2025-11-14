@@ -20,7 +20,8 @@ class TestMockSTT:
 
         assert isinstance(result, str)
         assert len(result) > 0
-        assert "table" in result.lower() or "book" in result.lower()
+        # Check for booking-related keywords (works for any service: book, appointment, schedule, etc.)
+        assert any(keyword in result.lower() for keyword in ["book", "appointment", "schedule", "reserve"])
 
     @pytest.mark.asyncio
     async def test_mock_stt_cycles_responses(self):
