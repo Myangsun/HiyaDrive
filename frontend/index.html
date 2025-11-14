@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HiyaDrive Voice Console</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="top-bar">
+        <div>
+          <p class="eyebrow">HiyaDrive</p>
+          <h1>Voice Mode</h1>
+        </div>
+        <div class="top-bar__meta">
+          <span class="dot dot--online"></span>
+          <span>Connected</span>
+          <span id="clock">--:--</span>
+        </div>
+      </header>
+
+      <main class="surface">
+        <section class="stage">
+          <div class="stage__halo">
+            <button
+              id="micButton"
+              class="mic-button"
+              aria-pressed="false"
+              aria-label="Tap to talk"
+            >
+              <span class="mic-button__icon"></span>
+            </button>
+          </div>
+          <div class="stage__text">
+            <p id="primaryStatus" class="stage__primary">Say “hiya” to begin</p>
+            <p id="stageSubtitle" class="stage__subtitle">
+              Tap and speak just like ChatGPT’s voice mode. Everything is read
+              back to you instantly.
+            </p>
+          </div>
+        </section>
+
+        <section class="conversation" id="transcript"></section>
+      </main>
+
+      <footer class="controls">
+        <div class="chips" id="statusChips"></div>
+        <div class="controls__actions">
+          <button id="demoBtn" class="pill pill--ghost">▶ Demo</button>
+          <button id="resetBtn" class="pill pill--ghost">Reset</button>
+          <button id="typeBtn" class="pill pill--outline">⌨︎ Type</button>
+        </div>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

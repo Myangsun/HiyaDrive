@@ -149,6 +149,13 @@ make stt-test          # Test speech-to-text
 make status            # Show system configuration
 ```
 
+### 🖥️ Simple In-Car Frontend
+
+- Location: open `frontend/index.html` in any modern browser (double-click from Finder is fine).
+- What you get: OpenAI Voice–style surface with a central mic halo, ambient transcript stream, and lightweight status chips for the 9-agent pipeline.
+- Voice pipeline: uses the browser’s Web Speech API when available and falls back to manual text entry so you can demo without microphones.
+- Guided demo: press **Run Guided Demo** inside the UI to watch each agent step progress automatically with sample dialogue.
+
 ---
 
 ## 🔌 Real API Stack

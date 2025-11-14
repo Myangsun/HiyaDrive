@@ -73,12 +73,19 @@ class TestVoiceProcessor:
     @pytest.mark.asyncio
     async def test_transcribe_audio(self):
         """Test transcribing audio."""
+        from unittest.mock import AsyncMock, patch
+
         processor = VoiceProcessor()
 
-        transcript = await processor.transcribe_audio(b"mock_audio")
+        # Mock the STT to avoid calling real API
+        with patch.object(processor.stt, 'transcribe', new_callable=AsyncMock) as mock_stt:
+            mock_stt.return_value = "Book a haircut for tomorrow at 3 PM"
 
-        assert isinstance(transcript, str)
-        assert len(transcript) > 0
+            transcript = await processor.transcribe_audio(b"mock_audio")
+
+            assert isinstance(transcript, str)
+            assert len(transcript) > 0
+            mock_stt.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_synthesize_text(self):

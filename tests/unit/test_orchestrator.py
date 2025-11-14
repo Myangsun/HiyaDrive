@@ -385,6 +385,9 @@ class TestCalendarRetryLogic:
             status=SessionStatus.ACTIVE,
         )
 
+        # Set max retries to test (system default is 2)
+        state.max_retries = 3
+
         # Simulate 3 retry attempts
         assert state.can_retry() is True
         state.increment_retry()
